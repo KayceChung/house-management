@@ -21,7 +21,21 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { action, params } = req.body;
+    // Parse form-urlencoded body from client
+    let action, params;
+    
+    if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
+      // Parse form-urlencoded data
+      const querystring = require('querystring');
+      const parsed = querystring.parse(req.body);
+      action = parsed.action;
+      params = parsed.params ? JSON.parse(parsed.params) : {};
+    } else {
+      // Parse JSON body
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      action = body.action;
+      params = body.params;
+    }
 
     if (!action) {
       return res.status(400).json({ error: 'Missing action parameter' });
@@ -30,7 +44,7 @@ export default async function handler(req, res) {
     // Google Apps Script endpoint
     const scriptUrl = 'https://script.google.com/macros/s/AKfycbwG9YyGVckprdQeP3GFZFNCO1ZcYER_TasskXCUjG2IuQizqmlZSpKfS80UlBXAHm4y3g/exec';
 
-    // Build form-urlencoded body
+    // Build form-urlencoded body to forward to Google Apps Script
     const formData = new URLSearchParams();
     formData.append('action', action);
     formData.append('params', JSON.stringify(params || {}));
