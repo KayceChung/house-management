@@ -4,6 +4,8 @@
  * This solves CORS issues by acting as trusted intermediary
  */
 
+import { parse } from 'querystring';
+
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,36 +26,56 @@ export default async function handler(req, res) {
     console.log('📡 [Proxy] Incoming request method:', req.method);
     console.log('📡 [Proxy] Content-Type:', req.headers['content-type']);
     console.log('📡 [Proxy] Raw body type:', typeof req.body);
+    console.log('📡 [Proxy] Is Buffer?:', Buffer.isBuffer(req.body));
     
-    // Convert body to string safely (handle Buffer, string, or object)
+    // IMPORTANT: In Vercel, we need to handle the raw stream or Buffer
+    // req.body is NOT automatically parsed
     let bodyString = '';
+    
     if (typeof req.body === 'string') {
       bodyString = req.body;
+      console.log('📡 [Proxy] Body is string');
     } else if (Buffer.isBuffer(req.body)) {
       bodyString = req.body.toString('utf-8');
-    } else if (req.body) {
-      bodyString = JSON.stringify(req.body);
+      console.log('📡 [Proxy] Body is Buffer, converted to string');
+    } else if (typeof req.body === 'object' && req.body !== null) {
+      // Try to get the raw body using different methods
+      if (req.rawBody) {
+        bodyString = typeof req.rawBody === 'string' ? req.rawBody : req.rawBody.toString('utf-8');
+        console.log('📡 [Proxy] Using req.rawBody');
+      } else {
+        // Last resort: try to read from stream
+        bodyString = await readStream(req);
+        console.log('📡 [Proxy] Read from stream');
+      }
     }
     
-    console.log('📡 [Proxy] Raw body preview:', bodyString.substring(0, 200));
+    console.log('📡 [Proxy] Final bodyString length:', bodyString.length);
+    console.log('📡 [Proxy] Raw body preview:', bodyString.substring(0, 300));
 
     // Parse form-urlencoded body from client
     let action, params;
     
     if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
       // Parse form-urlencoded data manually (Vercel doesn't auto-parse)
-      console.log('📡 [Proxy] Parsing form-urlencoded:', bodyString);
+      console.log('📡 [Proxy] Detected form-urlencoded');
       
-      const querystring = require('querystring');
-      const parsed = querystring.parse(bodyString);
+      if (!bodyString || bodyString.length === 0) {
+        console.error('❌ [Proxy] ERROR: bodyString is empty!');
+        return res.status(400).json({ error: 'Empty request body' });
+      }
       
-      console.log('📡 [Proxy] Parsed data:', { action: parsed.action, paramsLength: parsed.params?.length });
+      const parsed = parse(bodyString);
+      
+      console.log('📡 [Proxy] Parsed keys:', Object.keys(parsed));
+      console.log('📡 [Proxy] Parsed action:', parsed.action);
+      console.log('📡 [Proxy] Parsed params length:', parsed.params?.length);
       
       action = parsed.action;
       params = parsed.params ? JSON.parse(parsed.params) : {};
     } else if (req.headers['content-type']?.includes('application/json')) {
       // Parse JSON body
-      const body = typeof req.body === 'string' ? JSON.parse(bodyString) : req.body;
+      const body = typeof bodyString === 'string' ? JSON.parse(bodyString) : bodyString;
       action = body.action;
       params = body.params;
     } else {
@@ -66,6 +88,7 @@ export default async function handler(req, res) {
     console.log('📡 [Proxy] Extracted action:', action, 'Params keys:', Object.keys(params || {}));
 
     if (!action) {
+      console.error('❌ [Proxy] ERROR: Missing action parameter');
       return res.status(400).json({ error: 'Missing action parameter' });
     }
 
@@ -119,4 +142,18 @@ export default async function handler(req, res) {
       message: `Proxy error: ${error.message}`
     });
   }
+}
+
+// Helper function to read request stream
+async function readStream(req) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', chunk => {
+      data += chunk.toString('utf-8');
+    });
+    req.on('end', () => {
+      resolve(data);
+    });
+    req.on('error', reject);
+  });
 }
