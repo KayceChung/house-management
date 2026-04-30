@@ -1,7 +1,8 @@
 // ========== API CONFIGURATION ==========
-// IMPORTANT: Set your Google Apps Script Web App URL here
-// Format: https://script.google.com/macros/s/{SCRIPT_ID}/usercodeapp
-const API_URL = 'https://script.google.com/macros/s/AKfycbzHZ543AvL4jHzodlun3qbc8qa2RoBAFvVL_9laGZUqNmI_a32pIN6iPjPsA2MHoyeeiw/exec';
+// NOTE: This URL is now configured in config.js
+// Using CONFIG.API_URL from config.js ensures consistency
+// Please update config.js with your actual Google Apps Script Web App URL
+const API_URL = window.CONFIG?.API_URL || 'https://script.google.com/macros/s/AKfycbz865czw7ZqTpFon5BKHETE4zDDURzlw22Ykhwmu1cB9Cm1ge-NNrURxqp5RCwDTFU1DQ/usercodeapp';
 
 // ========== API HELPER FUNCTION ==========
 async function callApi(functionName, params = {}) {
