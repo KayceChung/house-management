@@ -10,12 +10,15 @@ window.CONFIG = {
     // 
     // How to get this URL:
     // 1. Open Google Apps Script editor (Extensions → Apps Script)
-    // 2. Click Deploy → New deployment
-    // 3. Select type: Web app
-    // 4. Execute as: Your email
-    // 5. Allow access to: Anyone
-    // 6. Deploy and copy the URL
-    API_URL: 'https://script.google.com/macros/s/AKfycbzHZ543AvL4jHzodlun3qbc8qa2RoBAFvVL_9laGZUqNmI_a32pIN6iPjPsA2MHoyeeiw/exec',
+    // 2. Click Deploy button
+    // 3. If already deployed: Click "Manage deployments" → Click latest → Click "Deploy new version"
+    // 4. If not deployed: Click "Deploy" → New deployment
+    //    - Select type: Web app
+    //    - Execute as: Your email
+    //    - Allow access to: Anyone
+    //    - Click Deploy and copy the URL
+    // 5. Replace the URL below with your deployment URL
+    API_URL: 'https://script.google.com/macros/s/AKfycbz865czw7ZqTpFon5BKHETE4zDDURzlw22Ykhwmu1cB9Cm1ge-NNrURxqp5RCwDTFU1DQ/usercodeapp',
     
     // 🏢 Spreadsheet name (should be "HOUSE-MANAGEMENT")
     SPREADSHEET_NAME: 'HOUSE-MANAGEMENT',
@@ -26,3 +29,4 @@ window.CONFIG = {
 };
 
 console.log('⚙️ Config loaded');
+console.log('API URL:', window.CONFIG.API_URL);
