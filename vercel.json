@@ -19,7 +19,7 @@
   "rewrites": [
     {
       "source": "/api/proxy",
-      "destination": "https://script.google.com/macros/s/AKfycbwG9YyGVckprdQeP3GFZFNCO1ZcYER_TasskXCUjG2IuQizqmlZSpKfS80UlBXAHm4y3g/exec"
+      "destination": "https://script.google.com/macros/s/AKfycbyt_N5TNEiCZ5VAxaP0wegFOWsEg46ePhrScpifqFjAhUnd7fR_GqVlx3vl--lYBBDy/exec"
     },
     {
       "source": "/(.*)",

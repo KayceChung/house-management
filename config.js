@@ -10,7 +10,7 @@ window.CONFIG = {
     API_URL: '/api/proxy',
     
     // Fallback to direct Google Apps Script (for local testing without Vercel)
-    DIRECT_API_URL: 'https://script.google.com/macros/s/AKfycbwG9YyGVckprdQeP3GFZFNCO1ZcYER_TasskXCUjG2IuQizqmlZSpKfS80UlBXAHm4y3g/exec',
+    DIRECT_API_URL: 'https://script.google.com/macros/s/AKfycbyt_N5TNEiCZ5VAxaP0wegFOWsEg46ePhrScpifqFjAhUnd7fR_GqVlx3vl--lYBBDy/exec',
     
     // 🏢 Spreadsheet name (should be "HOUSE-MANAGEMENT")
     SPREADSHEET_NAME: 'HOUSE-MANAGEMENT',
