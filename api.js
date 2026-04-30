@@ -1,8 +1,7 @@
 // ========== API CONFIGURATION ==========
-// Use direct Google Apps Script URL (more reliable during deployment)
-// If Vercel proxy becomes available later, update config.js
-const API_URL = window.CONFIG?.DIRECT_API_URL || 'https://script.google.com/macros/s/AKfycbwG9YyGVckprdQeP3GFZFNCO1ZcYER_TasskXCUjG2IuQizqmlZSpKfS80UlBXAHm4y3g/exec';
-const FALLBACK_API_URL = window.CONFIG?.API_URL || '/api/proxy';
+// Use Vercel proxy endpoint (Vercel forwards to Google Apps Script with CORS headers)
+const API_URL = window.CONFIG?.API_URL || '/api/proxy';
+const FALLBACK_API_URL = window.CONFIG?.DIRECT_API_URL || 'https://script.google.com/macros/s/AKfycbwG9YyGVckprdQeP3GFZFNCO1ZcYER_TasskXCUjG2IuQizqmlZSpKfS80UlBXAHm4y3g/exec';
 
 // ========== API HELPER FUNCTION ==========
 async function callApi(functionName, params = {}) {
