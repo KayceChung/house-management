@@ -974,6 +974,50 @@ function getPaymentReminderHistory(tenantId) {
 }
 
 /**
+ * Send test email to verify email system works
+ */
+function sendTestEmail(recipientEmail) {
+  try {
+    var subject = '🧪 Test Email - Hệ Thống Quản Lý Nhà Trọ';
+    var htmlBody = '<html><body style="font-family: Arial, sans-serif; color: #333;">';
+    htmlBody += '<div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px;">';
+    htmlBody += '<h2 style="color: #27ae60;">✅ Email System Đang Hoạt Động!</h2>';
+    htmlBody += '<p>Xin chào,</p>';
+    htmlBody += '<p>Đây là email kiểm tra từ hệ thống quản lý nhà trọ.</p>';
+    htmlBody += '<hr/>';
+    htmlBody += '<p><strong>Thông tin kiểm tra:</strong></p>';
+    htmlBody += '<ul>';
+    htmlBody += '<li>Email: ' + recipientEmail + '</li>';
+    htmlBody += '<li>Thời gian gửi: ' + formatDateVN(new Date()) + '</li>';
+    htmlBody += '<li>Spreadsheet ID: ' + SPREADSHEET_ID + '</li>';
+    htmlBody += '</ul>';
+    htmlBody += '<hr/>';
+    htmlBody += '<p style="color: #27ae60;"><strong>✓ Hệ thống email đã sẵn sàng để gửi nhắc nhở thanh toán!</strong></p>';
+    htmlBody += '<p style="margin-top: 30px; font-size: 12px; color: #999;">---<br/>Hệ thống quản lý nhà trọ tự động</p>';
+    htmlBody += '</div></body></html>';
+    
+    GmailApp.sendEmail(recipientEmail, subject, 'Test email', {
+      htmlBody: htmlBody
+    });
+    
+    Logger.log('Test email sent to: ' + recipientEmail);
+    return {
+      success: true,
+      message: 'Test email sent successfully to ' + recipientEmail + '! Check your inbox.',
+      email: recipientEmail,
+      sentTime: formatDateVN(new Date())
+    };
+  } catch (error) {
+    Logger.log('Error in sendTestEmail: ' + error.toString());
+    return {
+      success: false,
+      message: 'Error: ' + error.toString(),
+      error: error.toString()
+    };
+  }
+}
+
+/**
  * Handle POST requests from frontend
  * Endpoint: POST /usercodeapp
  * Body: { action: "functionName", params: { ... } }
@@ -1059,6 +1103,9 @@ function apiRouter(action, params) {
     
     case 'getPaymentReminderHistory':
       return getPaymentReminderHistory(params.tenantId);
+    
+    case 'sendTestEmail':
+      return sendTestEmail(params.email);
     
     default:
       return { success: false, message: 'Action not found: ' + action };
