@@ -1,7 +1,7 @@
 // ========== API CONFIGURATION ==========
 // Use Vercel proxy endpoint (Vercel forwards to Google Apps Script with CORS headers)
 const API_URL = window.CONFIG?.API_URL || '/api/proxy';
-const FALLBACK_API_URL = window.CONFIG?.DIRECT_API_URL || 'https://script.google.com/macros/s/AKfycbyt_N5TNEiCZ5VAxaP0wegFOWsEg46ePhrScpifqFjAhUnd7fR_GqVlx3vl--lYBBDy/exec';
+const FALLBACK_API_URL = window.CONFIG?.DIRECT_API_URL || 'https://script.google.com/macros/s/AKfycbyGjeIv9o8ZquGLDoNuHIAhJnOiTrjCzng734KZMPfICBVOhJXUQhcwrKmu4WTF-pmFfA/exec';
 
 // ========== API HELPER FUNCTION ==========
 async function callApi(functionName, params = {}) {
