@@ -9,19 +9,30 @@
 // ==========================================
 
 var SPREADSHEET = null;
-var SPREADSHEET_ID = null;
+var SPREADSHEET_ID = '1NMhhF31uc77uhv-C_vppT4w5e3Wbgw4KsIf36xbGXo8';  // HOUSE-MANAGEMENT spreadsheet
 var SPREADSHEET_NAME = null;
 
 // Safe initialization
 try {
-  SPREADSHEET = SpreadsheetApp.getActiveSpreadsheet();
+  // Try to open by ID first (most reliable)
+  SPREADSHEET = SpreadsheetApp.openById(SPREADSHEET_ID);
   if (SPREADSHEET) {
-    SPREADSHEET_ID = SPREADSHEET.getId();
     SPREADSHEET_NAME = SPREADSHEET.getName();
+    Logger.log('✅ Opened spreadsheet by ID: ' + SPREADSHEET_ID);
   }
 } catch (error) {
-  Logger.log('❌ FATAL: Cannot get active spreadsheet. GAS may not be bound to a spreadsheet.');
-  Logger.log('Error: ' + error.toString());
+  Logger.log('⚠️ Cannot open by ID, trying getActiveSpreadsheet()');
+  try {
+    SPREADSHEET = SpreadsheetApp.getActiveSpreadsheet();
+    if (SPREADSHEET) {
+      SPREADSHEET_ID = SPREADSHEET.getId();
+      SPREADSHEET_NAME = SPREADSHEET.getName();
+      Logger.log('✅ Using active spreadsheet: ' + SPREADSHEET_NAME);
+    }
+  } catch (error2) {
+    Logger.log('❌ FATAL: Cannot get spreadsheet');
+    Logger.log('Error: ' + error2.toString());
+  }
 }
 
 // Sheet names
