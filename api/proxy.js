@@ -24,14 +24,24 @@ export default async function handler(req, res) {
     console.log('📡 [Proxy] Incoming request method:', req.method);
     console.log('📡 [Proxy] Content-Type:', req.headers['content-type']);
     console.log('📡 [Proxy] Raw body type:', typeof req.body);
-    console.log('📡 [Proxy] Raw body preview:', req.body?.toString().substring(0, 200));
+    
+    // Convert body to string safely (handle Buffer, string, or object)
+    let bodyString = '';
+    if (typeof req.body === 'string') {
+      bodyString = req.body;
+    } else if (Buffer.isBuffer(req.body)) {
+      bodyString = req.body.toString('utf-8');
+    } else if (req.body) {
+      bodyString = JSON.stringify(req.body);
+    }
+    
+    console.log('📡 [Proxy] Raw body preview:', bodyString.substring(0, 200));
 
     // Parse form-urlencoded body from client
     let action, params;
     
     if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
       // Parse form-urlencoded data manually (Vercel doesn't auto-parse)
-      const bodyString = typeof req.body === 'string' ? req.body : req.body?.toString() || '';
       console.log('📡 [Proxy] Parsing form-urlencoded:', bodyString);
       
       const querystring = require('querystring');
@@ -43,8 +53,7 @@ export default async function handler(req, res) {
       params = parsed.params ? JSON.parse(parsed.params) : {};
     } else if (req.headers['content-type']?.includes('application/json')) {
       // Parse JSON body
-      const bodyString = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-      const body = JSON.parse(bodyString);
+      const body = typeof req.body === 'string' ? JSON.parse(bodyString) : req.body;
       action = body.action;
       params = body.params;
     } else {
