@@ -12,7 +12,7 @@ window.CONFIG = {
     API_URL: '/api/proxy',  // ✅ CORRECT for Vercel deployment
     
     // Fallback: Direct GAS URL (if you want to bypass proxy)
-    DIRECT_API_URL: 'https://script.google.com/macros/s/AKfycbyt_N5TNEiCZ5VAxaP0wegFOWsEg46ePhrScpifqFjAhUnd7fR_GqVlx3vl--lYBBDy/exec',
+    DIRECT_API_URL: 'https://script.google.com/macros/s/AKfycbyGjeIv9o8ZquGLDoNuHIAhJnOiTrjCzng734KZMPfICBVOhJXUQhcwrKmu4WTF-pmFfA/exec',
     
     // Spreadsheet name
     SPREADSHEET_NAME: 'HOUSE-MANAGEMENT',
