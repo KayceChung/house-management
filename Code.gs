@@ -1096,7 +1096,8 @@ function apiRouter(action, params) {
     
     // Dashboard
     case 'getDashboardStats':
-      return { success: true, stats: getDashboardStats() };
+      var stats = getDashboardStats();
+      return stats;
     
     // Room functions
     case 'getAllRooms':
