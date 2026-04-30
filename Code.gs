@@ -12,6 +12,8 @@ var SPREADSHEET = SpreadsheetApp.getActiveSpreadsheet();
 var SPREADSHEET_ID = SPREADSHEET.getId();
 
 // Sheet names
+var MANAGERS = 'Managers';
+var PROPERTIES = 'Properties';
 var ROOMS = 'Rooms';
 var TENANTS = 'Tenants';
 var CONTRACTS = 'Contracts';
@@ -24,24 +26,29 @@ var ASSETS = 'Assets';
 // ==========================================
 
 /**
- * Initialize database - Create 6 sheets with headers
+ * Initialize database - Create 8 sheets with headers (Multi-Property Support)
  * RUN THIS ONLY ONCE!
  */
 function initDatabase() {
   try {
-    Logger.log('Starting database initialization...');
+    Logger.log('Starting database initialization (Multi-Property)...');
     
-    createSheet(ROOMS, ['RoomID', 'RoomName', 'Floor', 'Status', 'Price', 'Description']);
-    createSheet(TENANTS, ['TenantID', 'FullName', 'Phone', 'IDCard', 'Email', 'RoomID', 'JoinDate']);
-    createSheet(CONTRACTS, ['ContractID', 'RoomID', 'TenantID', 'StartDate', 'EndDate', 'Deposit', 'Terms']);
-    createSheet(UTILITY_USAGE, ['ID', 'Month', 'Year', 'RoomID', 'PrevElec', 'CurrElec', 'PrevWater', 'CurrWater', 'Status']);
-    createSheet(TRANSACTIONS, ['TransID', 'RoomID', 'Month', 'Year', 'TotalAmount', 'PaymentStatus', 'PaidDate']);
-    createSheet(ASSETS, ['AssetID', 'RoomID', 'ItemName', 'Condition', 'Quantity']);
+    // New sheets for multi-property support
+    createSheet(MANAGERS, ['ManagerID', 'ManagerName', 'Email', 'Phone', 'CreatedDate']);
+    createSheet(PROPERTIES, ['PropertyID', 'ManagerID', 'PropertyName', 'Address', 'TotalRooms', 'CreatedDate']);
+    
+    // Rooms and related sheets with PropertyID
+    createSheet(ROOMS, ['RoomID', 'PropertyID', 'RoomName', 'Floor', 'Status', 'Price', 'Description']);
+    createSheet(TENANTS, ['TenantID', 'PropertyID', 'FullName', 'Phone', 'IDCard', 'Email', 'RoomID', 'JoinDate']);
+    createSheet(CONTRACTS, ['ContractID', 'PropertyID', 'RoomID', 'TenantID', 'StartDate', 'EndDate', 'Deposit', 'Terms']);
+    createSheet(UTILITY_USAGE, ['ID', 'PropertyID', 'Month', 'Year', 'RoomID', 'PrevElec', 'CurrElec', 'PrevWater', 'CurrWater', 'Status']);
+    createSheet(TRANSACTIONS, ['TransID', 'PropertyID', 'RoomID', 'Month', 'Year', 'TotalAmount', 'PaymentStatus', 'PaidDate']);
+    createSheet(ASSETS, ['AssetID', 'PropertyID', 'RoomID', 'ItemName', 'Condition', 'Quantity']);
     
     Logger.log('Database initialized successfully!');
     return {
       success: true,
-      message: 'Database initialized! 6 sheets created.'
+      message: 'Database initialized! 8 sheets created (Multi-Property Support).'
     };
   } catch (error) {
     Logger.log('Error: ' + error.toString());
@@ -83,9 +90,9 @@ function createSheet(sheetName, headers) {
 // ==========================================
 
 /**
- * Add new room
+ * Add new room (with PropertyID support)
  */
-function addRoom(roomName, floor, price, description) {
+function addRoom(propertyId, roomName, floor, price, description) {
   try {
     description = description || '';
     
@@ -95,13 +102,13 @@ function addRoom(roomName, floor, price, description) {
     }
     
     var roomId = generateId('ROOM');
-    roomsSheet.appendRow([roomId, roomName, floor, 'Trống', price, description]);
+    roomsSheet.appendRow([roomId, propertyId, roomName, floor, 'Trống', price, description]);
     
-    Logger.log('Room added: ' + roomName);
+    Logger.log('Room added: ' + roomName + ' for PropertyID: ' + propertyId);
     return {
       success: true,
       roomId: roomId,
-      message: 'Room ' + roomName + ' added successfully'
+      message: 'Phòng ' + roomName + ' được thêm thành công'
     };
   } catch (error) {
     Logger.log('Error in addRoom: ' + error.toString());
@@ -110,7 +117,42 @@ function addRoom(roomName, floor, price, description) {
 }
 
 /**
- * Get all rooms
+ * Get all rooms for a property
+ */
+function getRoomsByProperty(propertyId) {
+  try {
+    var roomsSheet = SPREADSHEET.getSheetByName(ROOMS);
+    if (!roomsSheet) {
+      return { success: false, message: 'Rooms sheet not found' };
+    }
+    
+    var data = roomsSheet.getDataRange().getValues();
+    var rooms = [];
+    
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === '') continue;
+      if (data[i][1] === propertyId) {
+        rooms.push({
+          roomId: data[i][0],
+          propertyId: data[i][1],
+          roomName: data[i][2],
+          floor: data[i][3],
+          status: data[i][4],
+          price: data[i][5],
+          description: data[i][6]
+        });
+      }
+    }
+    
+    return { success: true, rooms: rooms, count: rooms.length };
+  } catch (error) {
+    Logger.log('Error in getRoomsByProperty: ' + error.toString());
+    return { success: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Get all rooms (legacy - for backward compatibility)
  */
 function getAllRooms() {
   try {
@@ -123,13 +165,15 @@ function getAllRooms() {
     var rooms = [];
     
     for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === '') continue;
       rooms.push({
         roomId: data[i][0],
-        roomName: data[i][1],
-        floor: data[i][2],
-        status: data[i][3],
-        price: data[i][4],
-        description: data[i][5]
+        propertyId: data[i][1],
+        roomName: data[i][2],
+        floor: data[i][3],
+        status: data[i][4],
+        price: data[i][5],
+        description: data[i][6]
       });
     }
     
@@ -436,6 +480,163 @@ function getIndexHtmlContent() {
 // API ENDPOINT (FOR VERCEL FRONTEND)
 // ==========================================
 
+// ==========================================
+// MANAGER FUNCTIONS (MULTI-PROPERTY)
+// ==========================================
+
+/**
+ * Add new manager
+ */
+function addManager(managerName, email, phone) {
+  try {
+    var managersSheet = SPREADSHEET.getSheetByName(MANAGERS);
+    if (!managersSheet) {
+      return { success: false, message: 'Managers sheet not found. Run initDatabase() first!' };
+    }
+    
+    var managerId = generateId('MGR');
+    var createdDate = Utilities.formatDate(new Date(), 'GMT+7', 'dd/MM/yyyy');
+    managersSheet.appendRow([managerId, managerName, email, phone, createdDate]);
+    
+    Logger.log('Manager added: ' + managerName);
+    return {
+      success: true,
+      managerId: managerId,
+      message: 'Người quản lý ' + managerName + ' được thêm thành công'
+    };
+  } catch (error) {
+    Logger.log('Error in addManager: ' + error.toString());
+    return { success: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Get all managers
+ */
+function getAllManagers() {
+  try {
+    var managersSheet = SPREADSHEET.getSheetByName(MANAGERS);
+    if (!managersSheet) {
+      return { success: false, message: 'Managers sheet not found' };
+    }
+    
+    var data = managersSheet.getDataRange().getValues();
+    var managers = [];
+    
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === '') continue;
+      managers.push({
+        managerId: data[i][0],
+        managerName: data[i][1],
+        email: data[i][2],
+        phone: data[i][3],
+        createdDate: data[i][4]
+      });
+    }
+    
+    return { success: true, managers: managers, count: managers.length };
+  } catch (error) {
+    Logger.log('Error in getAllManagers: ' + error.toString());
+    return { success: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+// ==========================================
+// PROPERTY FUNCTIONS (MULTI-PROPERTY)
+// ==========================================
+
+/**
+ * Add new property
+ */
+function addProperty(managerId, propertyName, address, totalRooms) {
+  try {
+    var propertiesSheet = SPREADSHEET.getSheetByName(PROPERTIES);
+    if (!propertiesSheet) {
+      return { success: false, message: 'Properties sheet not found. Run initDatabase() first!' };
+    }
+    
+    var propertyId = generateId('PROP');
+    var createdDate = Utilities.formatDate(new Date(), 'GMT+7', 'dd/MM/yyyy');
+    propertiesSheet.appendRow([propertyId, managerId, propertyName, address, totalRooms, createdDate]);
+    
+    Logger.log('Property added: ' + propertyName);
+    return {
+      success: true,
+      propertyId: propertyId,
+      message: 'Bất động sản ' + propertyName + ' được thêm thành công'
+    };
+  } catch (error) {
+    Logger.log('Error in addProperty: ' + error.toString());
+    return { success: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Get all properties for a manager
+ */
+function getPropertiesByManager(managerId) {
+  try {
+    var propertiesSheet = SPREADSHEET.getSheetByName(PROPERTIES);
+    if (!propertiesSheet) {
+      return { success: false, message: 'Properties sheet not found' };
+    }
+    
+    var data = propertiesSheet.getDataRange().getValues();
+    var properties = [];
+    
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === '') continue;
+      if (data[i][1] === managerId) {
+        properties.push({
+          propertyId: data[i][0],
+          managerId: data[i][1],
+          propertyName: data[i][2],
+          address: data[i][3],
+          totalRooms: data[i][4],
+          createdDate: data[i][5]
+        });
+      }
+    }
+    
+    return { success: true, properties: properties, count: properties.length };
+  } catch (error) {
+    Logger.log('Error in getPropertiesByManager: ' + error.toString());
+    return { success: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Get all properties
+ */
+function getAllProperties() {
+  try {
+    var propertiesSheet = SPREADSHEET.getSheetByName(PROPERTIES);
+    if (!propertiesSheet) {
+      return { success: false, message: 'Properties sheet not found' };
+    }
+    
+    var data = propertiesSheet.getDataRange().getValues();
+    var properties = [];
+    
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === '') continue;
+      properties.push({
+        propertyId: data[i][0],
+        managerId: data[i][1],
+        propertyName: data[i][2],
+        address: data[i][3],
+        totalRooms: data[i][4],
+        createdDate: data[i][5]
+      });
+    }
+    
+    return { success: true, properties: properties, count: properties.length };
+  } catch (error) {
+    Logger.log('Error in getAllProperties: ' + error.toString());
+    return { success: false, message: 'Error: ' + error.toString() };
+  }
+}
+
 /**
  * Handle POST requests from frontend
  * Endpoint: POST /usercodeapp
@@ -464,19 +665,33 @@ function doPost(e) {
  */
 function apiRouter(action, params) {
   switch(action) {
+    // Manager functions
+    case 'addManager':
+      return addManager(params.managerName, params.email, params.phone);
+    
+    case 'getAllManagers':
+      return getAllManagers();
+    
+    // Property functions
+    case 'addProperty':
+      return addProperty(params.managerId, params.propertyName, params.address, params.totalRooms);
+    
+    case 'getPropertiesByManager':
+      return getPropertiesByManager(params.managerId);
+    
+    case 'getAllProperties':
+      return getAllProperties();
+    
+    // Dashboard
     case 'getDashboardStats':
       return { success: true, stats: getDashboardStats() };
     
+    // Room functions
     case 'getAllRooms':
-      return { success: true, rooms: getAllRooms() };
+      return getAllRooms();
     
     case 'addRoom':
-      var roomId = addRoom(params.roomName, params.floor, params.price, params.description);
-      return { 
-        success: true, 
-        message: 'Phòng được thêm thành công',
-        roomId: roomId 
-      };
+      return addRoom(params.roomName, params.floor, params.price, params.description);
     
     case 'submitUtilityReading':
       submitUtilityReading(params.roomId, params.currentElec, params.currentWater, params.phone);
@@ -489,16 +704,12 @@ function apiRouter(action, params) {
       markBillAsPaid(params.transId);
       return { success: true, message: 'Hóa đơn đã được cập nhật' };
     
+    // Tenant functions
     case 'getAllTenants':
       return { success: true, tenants: getAllTenants() };
     
     case 'addTenant':
-      var tenantId = addTenant(params.fullName, params.phone, params.idCard, params.email, params.roomId);
-      return { 
-        success: true, 
-        message: 'Khách hàng được thêm thành công',
-        tenantId: tenantId 
-      };
+      return addTenant(params.fullName, params.phone, params.idCard, params.email, params.roomId);
     
     default:
       return { success: false, message: 'Action not found: ' + action };
