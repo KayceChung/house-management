@@ -16,15 +16,13 @@ async function callApi(functionName, params = {}) {
         console.log(`📡 Calling API: ${functionName}`, params);
         
         // Use form-urlencoded to avoid CORS preflight OPTIONS request
+        // DON'T set Content-Type header - let URLSearchParams auto-set it!
         const body = new URLSearchParams();
         body.append('action', functionName);
         body.append('params', JSON.stringify(params));
         
         const response = await fetch(API_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
             body: body
         });
 
