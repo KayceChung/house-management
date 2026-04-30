@@ -5,17 +5,14 @@
  */
 
 window.CONFIG = {
-    // 🔗 API URL: Use Vercel proxy to avoid CORS issues
-    // Proxy forwards requests to Google Apps Script backend
-    API_URL: '/api/proxy',
+    // 🎯 Deploy on Google Apps Script = NO CORS!
+    // Use relative URL './exec' to call doPost() on same domain
+    API_URL: './exec',
     
-    // Fallback to direct Google Apps Script (for local testing without Vercel)
-    DIRECT_API_URL: 'https://script.google.com/macros/s/AKfycbyt_N5TNEiCZ5VAxaP0wegFOWsEg46ePhrScpifqFjAhUnd7fR_GqVlx3vl--lYBBDy/exec',
-    
-    // 🏢 Spreadsheet name (should be "HOUSE-MANAGEMENT")
+    // Spreadsheet name
     SPREADSHEET_NAME: 'HOUSE-MANAGEMENT',
     
-    // 💱 Utility prices (edit these to match your rates)
+    // Utility prices
     ELECTRIC_PRICE: 3000,  // VNĐ per kWh
     WATER_PRICE: 5000,     // VNĐ per m³
 };
