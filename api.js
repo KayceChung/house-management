@@ -15,10 +15,11 @@ async function callApi(functionName, params = {}) {
     try {
         console.log(`📡 Calling API: ${functionName}`, params);
         
+        // Use text/plain to avoid CORS preflight OPTIONS request
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'text/plain',
             },
             body: JSON.stringify({
                 action: functionName,
