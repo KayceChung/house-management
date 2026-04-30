@@ -15,16 +15,17 @@ async function callApi(functionName, params = {}) {
     try {
         console.log(`📡 Calling API: ${functionName}`, params);
         
-        // Use text/plain to avoid CORS preflight OPTIONS request
+        // Use form-urlencoded to avoid CORS preflight OPTIONS request
+        const body = new URLSearchParams();
+        body.append('action', functionName);
+        body.append('params', JSON.stringify(params));
+        
         const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'text/plain',
+                'Content-Type': 'application/x-www-form-urlencoded'
             },
-            body: JSON.stringify({
-                action: functionName,
-                params: params
-            })
+            body: body
         });
 
         // Handle both JSON and text responses

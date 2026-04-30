@@ -1033,14 +1033,18 @@ function doOptions(e) {
 
 /**
  * Handle POST requests from frontend
- * Endpoint: POST /usercodeapp
- * Body: { action: "functionName", params: { ... } }
+ * Endpoint: POST /exec
+ * Body: form-urlencoded with action and params
  */
 function doPost(e) {
   try {
-    var payload = JSON.parse(e.postData.contents);
-    var action = payload.action;
-    var params = payload.params || {};
+    // Parse form-urlencoded data instead of JSON
+    var action = e.parameter.action;
+    var params = {};
+    
+    if (e.parameter.params) {
+      params = JSON.parse(e.parameter.params);
+    }
     
     var result = apiRouter(action, params);
     
