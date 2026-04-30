@@ -113,9 +113,12 @@ export default async function handler(req, res) {
 
     const responseText = await response.text();
     console.log('📡 [Proxy] GAS Response status:', response.status);
-    console.log('📡 [Proxy] GAS Response preview:', responseText.substring(0, 200));
+    console.log('📡 [Proxy] GAS Response full text:', responseText);
+    console.log('📡 [Proxy] Response length:', responseText.length);
+    console.log('📡 [Proxy] Response first 500 chars:', responseText.substring(0, 500));
 
     if (!response.ok) {
+      console.error('❌ [Proxy] Non-200 response from GAS');
       return res.status(response.status).json({
         success: false,
         message: `Google Apps Script error: ${response.status}`,
@@ -124,13 +127,25 @@ export default async function handler(req, res) {
     }
 
     try {
+      if (!responseText || responseText.length === 0) {
+        console.error('❌ [Proxy] ERROR: GAS returned empty response');
+        return res.status(500).json({
+          success: false,
+          message: 'Google Apps Script returned empty response'
+        });
+      }
+      
       const data = JSON.parse(responseText);
+      console.log('✅ [Proxy] Successfully parsed GAS response:', data);
       return res.status(200).json(data);
     } catch (parseError) {
-      console.error('📡 [Proxy] Failed to parse GAS response:', parseError);
+      console.error('❌ [Proxy] Failed to parse GAS response:', parseError.message);
+      console.error('❌ [Proxy] Raw response was:', responseText.substring(0, 1000));
       return res.status(500).json({
         success: false,
-        message: 'Invalid JSON response from Google Apps Script'
+        message: 'Invalid JSON response from Google Apps Script',
+        rawResponse: responseText.substring(0, 300),
+        error: parseError.message
       });
     }
 
