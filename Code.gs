@@ -1070,8 +1070,11 @@ function apiRouter(action, params) {
     case 'getAllRooms':
       return getAllRooms();
     
+    case 'getRoomsByProperty':
+      return getRoomsByProperty(params.propertyId);
+    
     case 'addRoom':
-      return addRoom(params.roomName, params.floor, params.price, params.description);
+      return addRoom(params.propertyId, params.roomName, params.floor, params.price, params.description);
     
     case 'submitUtilityReading':
       submitUtilityReading(params.roomId, params.currentElec, params.currentWater, params.phone);
