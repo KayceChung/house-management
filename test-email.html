@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Email - Hệ Thống Quản Lý Nhà Trọ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .test-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .test-container h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .form-group input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .form-group input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-send {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn-send:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-send:active {
+            transform: translateY(0);
+        }
+        
+        .btn-send:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status-message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status-message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        
+        .status-message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        
+        .status-message.loading {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+        
+        .info-box {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info-box p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Email System</h1>
+        
+        <div class="info-box">
+            <p><strong>ℹ️ Hướng dẫn:</strong></p>
+            <p>1. Nhập email của bạn dưới đây</p>
+            <p>2. Click "Gửi Test Email"</p>
+            <p>3. Kiểm tra inbox email của bạn trong vài giây</p>
+        </div>
+        
+        <form id="testEmailForm">
+            <div class="form-group">
+                <label for="email">📧 Email của bạn:</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    placeholder="chunghienkhang@gmail.com" 
+                    required
+                    value="chunghienkhang@gmail.com"
+                >
+            </div>
+            
+            <button type="submit" class="btn-send" id="sendBtn">
+                🚀 Gửi Test Email
+            </button>
+        </form>
+        
+        <div id="statusMessage" class="status-message"></div>
+    </div>
+    
+    <script>
+        // Import config
+        const config = {
+            // ⚠️ IMPORTANT: Cập nhật URL này với Google Apps Script Deployment URL
+            // Lấy từ Google Apps Script → Deploy → Get ID
+            API_URL: 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/usercodeapp'
+        };
+        
+        const form = document.getElementById('testEmailForm');
+        const emailInput = document.getElementById('email');
+        const sendBtn = document.getElementById('sendBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = emailInput.value.trim();
+            
+            if (!email) {
+                showError('Vui lòng nhập email');
+                return;
+            }
+            
+            // Check if API_URL is configured
+            if (config.API_URL.includes('YOUR_SCRIPT_ID')) {
+                showError('❌ Lỗi: Chưa cấu hình API_URL. Vui lòng cập nhật file config.js');
+                return;
+            }
+            
+            sendBtn.disabled = true;
+            showLoading('⏳ Đang gửi email...');
+            
+            try {
+                const response = await fetch(config.API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'sendTestEmail',
+                        params: {
+                            email: email
+                        }
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('HTTP error! status: ' + response.status);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('✅ Email gửi thành công! Hãy kiểm tra inbox của ' + email);
+                    console.log('Response:', data);
+                } else {
+                    showError('❌ Lỗi: ' + (data.message || 'Không thể gửi email'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('❌ Lỗi kết nối: ' + error.message + '\n\nKiểm tra:\n1. API_URL có đúng không?\n2. Google Apps Script có được deploy không?');
+            } finally {
+                sendBtn.disabled = false;
+            }
+        });
+        
+        function showLoading(message) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message loading';
+        }
+        
+        function showSuccess(message) {
+            statusMessage.innerHTML = message;
+            statusMessage.className = 'status-message success';
+        }
+        
+        function showError(message) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message error';
+        }
+    </script>
+</body>
+</html>
