@@ -132,6 +132,51 @@ function verifySheets() {
   return result;
 }
 
+/**
+ * AUTO-INIT: Check and initialize database if needed
+ */
+function ensureDatabaseInitialized() {
+  try {
+    Logger.log('🔍 Checking if database is initialized...');
+    
+    // Check if Rooms sheet exists
+    var roomsSheet = SPREADSHEET.getSheetByName(ROOMS);
+    
+    if (roomsSheet) {
+      Logger.log('✅ Database already initialized (Rooms sheet exists)');
+      return { success: true, message: 'Database already initialized' };
+    }
+    
+    Logger.log('⚠️ Database not initialized - auto-initializing now...');
+    
+    // Run initDatabase
+    var initResult = initDatabase();
+    
+    if (initResult.success) {
+      Logger.log('✅ Database auto-initialized successfully');
+      
+      // Optionally seed dummy data
+      Logger.log('📊 Auto-seeding dummy data...');
+      seedDummyData();
+      
+      return { 
+        success: true, 
+        message: 'Database initialized and seeded with dummy data' 
+      };
+    } else {
+      Logger.log('❌ Failed to auto-initialize database: ' + initResult.message);
+      return initResult;
+    }
+    
+  } catch (error) {
+    Logger.log('❌ Error in ensureDatabaseInitialized: ' + error.toString());
+    return { 
+      success: false, 
+      message: 'Auto-init error: ' + error.toString() 
+    };
+  }
+}
+
 // ==========================================
 // DATABASE INITIALIZATION
 // ==========================================
@@ -1813,6 +1858,14 @@ function doPost(e) {
     }
     
     Logger.log('✅ Spreadsheet: ' + SPREADSHEET_NAME);
+    
+    // AUTO-INITIALIZE database if needed
+    Logger.log('🔄 Ensuring database is initialized...');
+    var ensureResult = ensureDatabaseInitialized();
+    if (!ensureResult.success) {
+      Logger.log('⚠️ Database initialization returned: ' + ensureResult.message);
+    }
+    
     Logger.log('Action: ' + e.parameter.action);
     
     // Parse form-urlencoded data instead of JSON
