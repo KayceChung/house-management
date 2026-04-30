@@ -1018,6 +1018,20 @@ function sendTestEmail(recipientEmail) {
 }
 
 /**
+ * Handle CORS preflight requests (OPTIONS)
+ * Required for browser CORS policy
+ */
+function doOptions(e) {
+  var output = ContentService.createTextOutput();
+  output.setMimeType(ContentService.MimeType.TEXT);
+  output.setHeader('Access-Control-Allow-Origin', '*');
+  output.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  output.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  output.setHeader('Access-Control-Max-Age', '86400');
+  return output;
+}
+
+/**
  * Handle POST requests from frontend
  * Endpoint: POST /usercodeapp
  * Body: { action: "functionName", params: { ... } }
@@ -1030,13 +1044,27 @@ function doPost(e) {
     
     var result = apiRouter(action, params);
     
-    return ContentService.createTextOutput(JSON.stringify(result))
+    var output = ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
+    
+    // Add CORS headers to response
+    output.setHeader('Access-Control-Allow-Origin', '*');
+    output.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    output.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    return output;
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
+    var output = ContentService.createTextOutput(JSON.stringify({
       success: false,
       message: 'Error: ' + error.toString()
     })).setMimeType(ContentService.MimeType.JSON);
+    
+    // Add CORS headers to error response
+    output.setHeader('Access-Control-Allow-Origin', '*');
+    output.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    output.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    return output;
   }
 }
 
