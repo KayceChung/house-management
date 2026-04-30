@@ -18,7 +18,7 @@ window.CONFIG = {
     //    - Allow access to: Anyone
     //    - Click Deploy and copy the URL
     // 5. Replace the URL below with your deployment URL
-    API_URL: 'https://script.google.com/macros/s/AKfycbz865czw7ZqTpFon5BKHETE4zDDURzlw22Ykhwmu1cB9Cm1ge-NNrURxqp5RCwDTFU1DQ/usercodeapp',
+    API_URL: 'https://script.google.com/macros/s/AKfycbyh5yA8JF_SNK6ncaAXEyhD5AhXMObU9dI4tm8DrDhyvOBKsJcozS5FajXUZj8ML2_YAg/usercodeapp',
     
     // 🏢 Spreadsheet name (should be "HOUSE-MANAGEMENT")
     SPREADSHEET_NAME: 'HOUSE-MANAGEMENT',
