@@ -5,12 +5,24 @@
  */
 
 // ==========================================
-// GLOBAL VARIABLES
+// GLOBAL VARIABLES - WITH SAFE INITIALIZATION
 // ==========================================
 
-var SPREADSHEET = SpreadsheetApp.getActiveSpreadsheet();
-var SPREADSHEET_ID = SPREADSHEET.getId();
-var SPREADSHEET_NAME = SPREADSHEET.getName();
+var SPREADSHEET = null;
+var SPREADSHEET_ID = null;
+var SPREADSHEET_NAME = null;
+
+// Safe initialization
+try {
+  SPREADSHEET = SpreadsheetApp.getActiveSpreadsheet();
+  if (SPREADSHEET) {
+    SPREADSHEET_ID = SPREADSHEET.getId();
+    SPREADSHEET_NAME = SPREADSHEET.getName();
+  }
+} catch (error) {
+  Logger.log('❌ FATAL: Cannot get active spreadsheet. GAS may not be bound to a spreadsheet.');
+  Logger.log('Error: ' + error.toString());
+}
 
 // Sheet names
 var MANAGERS = 'Managers';
@@ -24,14 +36,18 @@ var ASSETS = 'Assets';
 var PAYMENT_REMINDERS = 'PaymentReminders';
 
 // Log spreadsheet info on load
-Logger.log('╔════════════════════════════════════════╗');
-Logger.log('║  HOUSE MANAGEMENT SYSTEM INITIALIZED  ║');
-Logger.log('╠════════════════════════════════════════╣');
-Logger.log('Spreadsheet Name: ' + SPREADSHEET_NAME);
-Logger.log('Spreadsheet ID: ' + SPREADSHEET_ID);
-Logger.log('Expected Name: HOUSE-MANAGEMENT');
-Logger.log('Match: ' + (SPREADSHEET_NAME === 'HOUSE-MANAGEMENT' ? '✅ YES' : '❌ NO - NAME MISMATCH!'));
-Logger.log('╚════════════════════════════════════════╝');
+if (SPREADSHEET) {
+  Logger.log('╔════════════════════════════════════════╗');
+  Logger.log('║  HOUSE MANAGEMENT SYSTEM INITIALIZED  ║');
+  Logger.log('╠════════════════════════════════════════╣');
+  Logger.log('Spreadsheet Name: ' + SPREADSHEET_NAME);
+  Logger.log('Spreadsheet ID: ' + SPREADSHEET_ID);
+  Logger.log('Expected Name: HOUSE-MANAGEMENT');
+  Logger.log('Match: ' + (SPREADSHEET_NAME === 'HOUSE-MANAGEMENT' ? '✅ YES' : '❌ NO - NAME MISMATCH!'));
+  Logger.log('╚════════════════════════════════════════╝');
+} else {
+  Logger.log('❌ CRITICAL: SPREADSHEET is null on startup');
+}
 
 // ==========================================
 // DIAGNOSTIC FUNCTIONS
@@ -1777,16 +1793,16 @@ function doPost(e) {
   Logger.log('║          doPost() CALLED               ║');
   Logger.log('╠════════════════════════════════════════╣');
   Logger.log('Request received at: ' + new Date().toISOString());
-  Logger.log('Spreadsheet: ' + SPREADSHEET_NAME);
-  Logger.log('Action: ' + e.parameter.action);
   
   try {
     // Verify connection before processing
     if (!SPREADSHEET) {
-      throw new Error('SPREADSHEET object is null - GAS not linked to spreadsheet');
+      Logger.log('❌ CRITICAL: SPREADSHEET is null!');
+      throw new Error('GAS is not bound to a spreadsheet. Please bind this GAS project to "HOUSE-MANAGEMENT" spreadsheet.');
     }
     
-    Logger.log('✅ Spreadsheet connected: ' + SPREADSHEET_NAME);
+    Logger.log('✅ Spreadsheet: ' + SPREADSHEET_NAME);
+    Logger.log('Action: ' + e.parameter.action);
     
     // Parse form-urlencoded data instead of JSON
     var action = e.parameter.action;
@@ -1828,14 +1844,16 @@ function doPost(e) {
     
   } catch (error) {
     Logger.log('❌ ERROR in doPost: ' + error.toString());
-    Logger.log('❌ Stack: ' + error.stack);
+    Logger.log('Stack trace:');
+    Logger.log(error.stack);
     Logger.log('╚════════════════════════════════════════╝');
     
     var errorResponse = {
       success: false,
       message: 'Error: ' + error.toString(),
       timestamp: new Date().toISOString(),
-      spreadsheet: SPREADSHEET_NAME
+      spreadsheet: SPREADSHEET_NAME || 'NOT CONNECTED',
+      action: e.parameter?.action || 'unknown'
     };
     
     var output = ContentService.createTextOutput(JSON.stringify(errorResponse));
