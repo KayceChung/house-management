@@ -10,6 +10,7 @@
 
 var SPREADSHEET = SpreadsheetApp.getActiveSpreadsheet();
 var SPREADSHEET_ID = SPREADSHEET.getId();
+var SPREADSHEET_NAME = SPREADSHEET.getName();
 
 // Sheet names
 var MANAGERS = 'Managers';
@@ -21,6 +22,88 @@ var UTILITY_USAGE = 'UtilityUsage';
 var TRANSACTIONS = 'Transactions';
 var ASSETS = 'Assets';
 var PAYMENT_REMINDERS = 'PaymentReminders';
+
+// Log spreadsheet info on load
+Logger.log('╔════════════════════════════════════════╗');
+Logger.log('║  HOUSE MANAGEMENT SYSTEM INITIALIZED  ║');
+Logger.log('╠════════════════════════════════════════╣');
+Logger.log('Spreadsheet Name: ' + SPREADSHEET_NAME);
+Logger.log('Spreadsheet ID: ' + SPREADSHEET_ID);
+Logger.log('Expected Name: HOUSE-MANAGEMENT');
+Logger.log('Match: ' + (SPREADSHEET_NAME === 'HOUSE-MANAGEMENT' ? '✅ YES' : '❌ NO - NAME MISMATCH!'));
+Logger.log('╚════════════════════════════════════════╝');
+
+// ==========================================
+// DIAGNOSTIC FUNCTIONS
+// ==========================================
+
+/**
+ * Test connection and spreadsheet info
+ */
+function testConnection() {
+  var result = {
+    timestamp: new Date().toISOString(),
+    spreadsheet: {
+      name: SPREADSHEET_NAME,
+      id: SPREADSHEET_ID,
+      expectedName: 'HOUSE-MANAGEMENT',
+      nameMatch: SPREADSHEET_NAME === 'HOUSE-MANAGEMENT'
+    },
+    sheets: [],
+    errors: []
+  };
+  
+  try {
+    var sheets = SPREADSHEET.getSheets();
+    result.sheets = sheets.map(s => ({
+      name: s.getName(),
+      index: s.getIndex(),
+      rows: s.getLastRow()
+    }));
+    
+    Logger.log('✅ Connection OK');
+    Logger.log('Sheets found: ' + sheets.length);
+    sheets.forEach(s => {
+      Logger.log('  📄 ' + s.getName() + ' (' + s.getLastRow() + ' rows)');
+    });
+  } catch (error) {
+    result.errors.push('Cannot access spreadsheet: ' + error.toString());
+    Logger.log('❌ ERROR: ' + error.toString());
+  }
+  
+  return result;
+}
+
+/**
+ * Verify all expected sheets exist
+ */
+function verifySheets() {
+  var expectedSheets = [MANAGERS, PROPERTIES, ROOMS, TENANTS, CONTRACTS, UTILITY_USAGE, TRANSACTIONS, ASSETS, PAYMENT_REMINDERS];
+  var result = {
+    expected: expectedSheets,
+    found: [],
+    missing: []
+  };
+  
+  try {
+    var sheets = SPREADSHEET.getSheets();
+    var sheetNames = sheets.map(s => s.getName());
+    
+    expectedSheets.forEach(sheet => {
+      if (sheetNames.includes(sheet)) {
+        result.found.push(sheet);
+        Logger.log('✅ ' + sheet);
+      } else {
+        result.missing.push(sheet);
+        Logger.log('❌ ' + sheet + ' - MISSING');
+      }
+    });
+  } catch (error) {
+    Logger.log('❌ Error verifying sheets: ' + error.toString());
+  }
+  
+  return result;
+}
 
 // ==========================================
 // DATABASE INITIALIZATION
@@ -1690,16 +1773,45 @@ function doOptions(e) {
  * Body: form-urlencoded with action and params
  */
 function doPost(e) {
+  Logger.log('╔════════════════════════════════════════╗');
+  Logger.log('║          doPost() CALLED               ║');
+  Logger.log('╠════════════════════════════════════════╣');
+  Logger.log('Request received at: ' + new Date().toISOString());
+  Logger.log('Spreadsheet: ' + SPREADSHEET_NAME);
+  Logger.log('Action: ' + e.parameter.action);
+  
   try {
+    // Verify connection before processing
+    if (!SPREADSHEET) {
+      throw new Error('SPREADSHEET object is null - GAS not linked to spreadsheet');
+    }
+    
+    Logger.log('✅ Spreadsheet connected: ' + SPREADSHEET_NAME);
+    
     // Parse form-urlencoded data instead of JSON
     var action = e.parameter.action;
     var params = {};
     
-    if (e.parameter.params) {
-      params = JSON.parse(e.parameter.params);
+    if (!action) {
+      throw new Error('Missing action parameter');
     }
     
+    Logger.log('📡 Action: ' + action);
+    
+    if (e.parameter.params) {
+      try {
+        params = JSON.parse(e.parameter.params);
+        Logger.log('📋 Params: ' + JSON.stringify(params));
+      } catch (parseError) {
+        Logger.log('⚠️ Warning parsing params: ' + parseError.toString());
+        params = {};
+      }
+    }
+    
+    Logger.log('🔄 Routing to apiRouter...');
     var result = apiRouter(action, params);
+    
+    Logger.log('✅ Result: ' + JSON.stringify(result).substring(0, 100));
     
     var output = ContentService.createTextOutput(JSON.stringify(result));
     output.setMimeType(ContentService.MimeType.JSON);
@@ -1709,12 +1821,24 @@ function doPost(e) {
     output.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     output.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     
+    Logger.log('✅ doPost completed successfully');
+    Logger.log('╚════════════════════════════════════════╝');
+    
     return output;
+    
   } catch (error) {
-    var output = ContentService.createTextOutput(JSON.stringify({
+    Logger.log('❌ ERROR in doPost: ' + error.toString());
+    Logger.log('❌ Stack: ' + error.stack);
+    Logger.log('╚════════════════════════════════════════╝');
+    
+    var errorResponse = {
       success: false,
-      message: 'Error: ' + error.toString()
-    }));
+      message: 'Error: ' + error.toString(),
+      timestamp: new Date().toISOString(),
+      spreadsheet: SPREADSHEET_NAME
+    };
+    
+    var output = ContentService.createTextOutput(JSON.stringify(errorResponse));
     output.setMimeType(ContentService.MimeType.JSON);
     
     // Add CORS headers to error response
@@ -1871,4 +1995,125 @@ function addTenant(fullName, phone, idCard, email, roomId) {
     tenantId: tenantId,
     message: 'Khách hàng ' + fullName + ' được thêm thành công'
   };
+}
+
+// ==========================================
+// DUMMY DATA FOR TESTING
+// ==========================================
+
+/**
+ * Seed dummy data for testing
+ * Run this after initDatabase() to populate with sample data
+ */
+function seedDummyData() {
+  try {
+    Logger.log('📊 Starting to seed dummy data...');
+    
+    var managersSheet = SPREADSHEET.getSheetByName(MANAGERS);
+    var propertiesSheet = SPREADSHEET.getSheetByName(PROPERTIES);
+    var roomsSheet = SPREADSHEET.getSheetByName(ROOMS);
+    var tenantsSheet = SPREADSHEET.getSheetByName(TENANTS);
+    var transSheet = SPREADSHEET.getSheetByName(TRANSACTIONS);
+    var utilitySheet = SPREADSHEET.getSheetByName(UTILITY_USAGE);
+    
+    if (!managersSheet || !propertiesSheet || !roomsSheet) {
+      return {
+        success: false,
+        message: 'Sheets not found. Run initDatabase() first!'
+      };
+    }
+    
+    // 1. Add Manager
+    var managerId = 'MGR001';
+    var managerDate = new Date(2026, 0, 1);
+    managersSheet.appendRow([managerId, 'Nguyễn Văn A', 'manager@email.com', '0123456789', managerDate]);
+    
+    // 2. Add Property
+    var propertyId = 'PROP001';
+    var propDate = new Date(2026, 0, 5);
+    propertiesSheet.appendRow([propertyId, managerId, 'Nhà Trọ Trung Tâm', '123 Đường ABC, TP.HCM', 10, propDate]);
+    
+    // 3. Add Rooms (10 rooms: 7 occupied, 3 empty)
+    var rooms = [
+      ['ROOM001', propertyId, 'Phòng 101', 1, 'Đã Cho Thuê', 3000000, 'Phòng đơn, có WC riêng'],
+      ['ROOM002', propertyId, 'Phòng 102', 1, 'Đã Cho Thuê', 3000000, 'Phòng đơn, có WC riêng'],
+      ['ROOM003', propertyId, 'Phòng 103', 1, 'Trống', 3000000, 'Phòng đơn, có WC riêng'],
+      ['ROOM004', propertyId, 'Phòng 201', 2, 'Đã Cho Thuê', 3500000, 'Phòng đôi, view đường phố'],
+      ['ROOM005', propertyId, 'Phòng 202', 2, 'Đã Cho Thuê', 3500000, 'Phòng đôi, view đường phố'],
+      ['ROOM006', propertyId, 'Phòng 203', 2, 'Trống', 3500000, 'Phòng đôi, view đường phố'],
+      ['ROOM007', propertyId, 'Phòng 301', 3, 'Đã Cho Thuê', 4000000, 'Phòng VIP, ban công rộng'],
+      ['ROOM008', propertyId, 'Phòng 302', 3, 'Đã Cho Thuê', 4000000, 'Phòng VIP, ban công rộng'],
+      ['ROOM009', propertyId, 'Phòng 303', 3, 'Đã Cho Thuê', 4000000, 'Phòng VIP, ban công rộng'],
+      ['ROOM010', propertyId, 'Phòng 304', 3, 'Trống', 4000000, 'Phòng VIP, ban công rộng']
+    ];
+    
+    for (var i = 0; i < rooms.length; i++) {
+      roomsSheet.appendRow(rooms[i]);
+    }
+    
+    // 4. Add Tenants (for occupied rooms)
+    var tenants = [
+      ['TENANT001', propertyId, 'Trần Thị B', '0912345678', '0123456789', 'thib@email.com', 'ROOM001', 15, new Date(2025, 6, 1)],
+      ['TENANT002', propertyId, 'Lê Văn C', '0923456789', '0234567890', 'levanc@email.com', 'ROOM002', 20, new Date(2025, 7, 15)],
+      ['TENANT003', propertyId, 'Phạm Thị D', '0934567890', '0345678901', 'phamthid@email.com', 'ROOM004', 25, new Date(2025, 8, 1)],
+      ['TENANT004', propertyId, 'Hoàng Văn E', '0945678901', '0456789012', 'hoangvane@email.com', 'ROOM005', 10, new Date(2026, 0, 10)],
+      ['TENANT005', propertyId, 'Vũ Thị F', '0956789012', '0567890123', 'vuthif@email.com', 'ROOM007', 30, new Date(2025, 5, 20)],
+      ['TENANT006', propertyId, 'Đặng Văn G', '0967890123', '0678901234', 'dangvang@email.com', 'ROOM008', 5, new Date(2026, 0, 25)],
+      ['TENANT007', propertyId, 'Bùi Thị H', '0978901234', '0789012345', 'buithih@email.com', 'ROOM009', 15, new Date(2025, 11, 1)]
+    ];
+    
+    for (var i = 0; i < tenants.length; i++) {
+      tenantsSheet.appendRow(tenants[i]);
+    }
+    
+    // 5. Add Transactions (Monthly bills - Mix of paid and unpaid for current month)
+    var currentMonth = new Date().getMonth() + 1;
+    var currentYear = new Date().getFullYear();
+    var transactions = [
+      // Current month - Mix of paid and unpaid
+      ['TRANS001', propertyId, 'ROOM001', currentMonth, currentYear, 3000000, 'Đã thu', new Date(currentMonth > 1 ? currentYear : currentYear - 1, currentMonth - 2, 15)],
+      ['TRANS002', propertyId, 'ROOM002', currentMonth, currentYear, 3000000, 'Chưa thu', ''],
+      ['TRANS003', propertyId, 'ROOM004', currentMonth, currentYear, 3500000, 'Đã thu', new Date(currentMonth > 1 ? currentYear : currentYear - 1, currentMonth - 2, 20)],
+      ['TRANS004', propertyId, 'ROOM005', currentMonth, currentYear, 3500000, 'Chưa thu', ''],
+      ['TRANS005', propertyId, 'ROOM007', currentMonth, currentYear, 4000000, 'Đã thu', new Date(currentMonth > 1 ? currentYear : currentYear - 1, currentMonth - 2, 10)],
+      ['TRANS006', propertyId, 'ROOM008', currentMonth, currentYear, 4000000, 'Chưa thu', ''],
+      ['TRANS007', propertyId, 'ROOM009', currentMonth, currentYear, 4000000, 'Đã thu', new Date(currentMonth > 1 ? currentYear : currentYear - 1, currentMonth - 2, 25)],
+      
+      // Previous months - All paid
+      ['TRANS101', propertyId, 'ROOM001', currentMonth - 1, currentYear, 3000000, 'Đã thu', new Date(currentMonth - 2 > 0 ? currentYear : currentYear - 1, currentMonth - 3 > 0 ? currentMonth - 3 : currentMonth + 9, 15)],
+      ['TRANS102', propertyId, 'ROOM002', currentMonth - 1, currentYear, 3000000, 'Đã thu', new Date(currentMonth - 2 > 0 ? currentYear : currentYear - 1, currentMonth - 3 > 0 ? currentMonth - 3 : currentMonth + 9, 20)]
+    ];
+    
+    for (var i = 0; i < transactions.length; i++) {
+      transSheet.appendRow(transactions[i]);
+    }
+    
+    // 6. Add Utility Usage (Current month readings)
+    var utilityData = [
+      ['UTL001', propertyId, currentMonth, currentYear, 'ROOM001', 100, 125, 5, 8, 'Đã báo cáo'],
+      ['UTL002', propertyId, currentMonth, currentYear, 'ROOM002', 95, 112, 4, 7, 'Đã báo cáo'],
+      ['UTL003', propertyId, currentMonth, currentYear, 'ROOM004', 120, 145, 6, 10, 'Đã báo cáo'],
+      ['UTL004', propertyId, currentMonth, currentYear, 'ROOM005', 110, 138, 5, 9, 'Đã báo cáo'],
+      ['UTL005', propertyId, currentMonth, currentYear, 'ROOM007', 150, 180, 8, 12, 'Đã báo cáo'],
+      ['UTL006', propertyId, currentMonth, currentYear, 'ROOM008', 145, 175, 7, 11, 'Đã báo cáo'],
+      ['UTL007', propertyId, currentMonth, currentYear, 'ROOM009', 155, 185, 8, 13, 'Đã báo cáo']
+    ];
+    
+    for (var i = 0; i < utilityData.length; i++) {
+      utilitySheet.appendRow(utilityData[i]);
+    }
+    
+    Logger.log('✅ Dummy data seeded successfully!');
+    return {
+      success: true,
+      message: '✅ Dummy data created! System now has:\n- 1 Manager\n- 1 Property\n- 10 Rooms (7 occupied, 3 empty)\n- 7 Tenants\n- Monthly transactions & utilities'
+    };
+    
+  } catch (error) {
+    Logger.log('❌ Error seeding data: ' + error.toString());
+    return {
+      success: false,
+      message: 'Error: ' + error.toString()
+    };
+  }
 }
