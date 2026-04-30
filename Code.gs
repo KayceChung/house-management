@@ -1048,8 +1048,8 @@ function doPost(e) {
     
     var result = apiRouter(action, params);
     
-    var output = ContentService.createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
+    var output = ContentService.createTextOutput(JSON.stringify(result));
+    output.setMimeType(ContentService.MimeType.JSON);
     
     // Add CORS headers to response
     output.setHeader('Access-Control-Allow-Origin', '*');
@@ -1061,7 +1061,8 @@ function doPost(e) {
     var output = ContentService.createTextOutput(JSON.stringify({
       success: false,
       message: 'Error: ' + error.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    }));
+    output.setMimeType(ContentService.MimeType.JSON);
     
     // Add CORS headers to error response
     output.setHeader('Access-Control-Allow-Origin', '*');
