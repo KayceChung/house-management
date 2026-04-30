@@ -5,20 +5,12 @@
  */
 
 window.CONFIG = {
-    // 🔗 Your Google Apps Script Web App deployment URL
-    // Format: https://script.google.com/macros/s/{SCRIPT_ID}/usercodeapp
-    // 
-    // How to get this URL:
-    // 1. Open Google Apps Script editor (Extensions → Apps Script)
-    // 2. Click Deploy button
-    // 3. If already deployed: Click "Manage deployments" → Click latest → Click "Deploy new version"
-    // 4. If not deployed: Click "Deploy" → New deployment
-    //    - Select type: Web app
-    //    - Execute as: Your email
-    //    - Allow access to: Anyone
-    //    - Click Deploy and copy the URL
-    // 5. Replace the URL below with your deployment URL
-    API_URL: 'https://script.google.com/macros/s/AKfycbwG9YyGVckprdQeP3GFZFNCO1ZcYER_TasskXCUjG2IuQizqmlZSpKfS80UlBXAHm4y3g/exec',
+    // 🔗 API URL: Use Vercel proxy to avoid CORS issues
+    // Proxy forwards requests to Google Apps Script backend
+    API_URL: '/api/proxy',
+    
+    // Fallback to direct Google Apps Script (for local testing without Vercel)
+    DIRECT_API_URL: 'https://script.google.com/macros/s/AKfycbwG9YyGVckprdQeP3GFZFNCO1ZcYER_TasskXCUjG2IuQizqmlZSpKfS80UlBXAHm4y3g/exec',
     
     // 🏢 Spreadsheet name (should be "HOUSE-MANAGEMENT")
     SPREADSHEET_NAME: 'HOUSE-MANAGEMENT',

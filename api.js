@@ -1,8 +1,8 @@
 // ========== API CONFIGURATION ==========
-// NOTE: This URL is now configured in config.js
-// Using CONFIG.API_URL from config.js ensures consistency
-// Please update config.js with your actual Google Apps Script Web App URL
-const API_URL = window.CONFIG?.API_URL || 'https://script.google.com/macros/s/AKfycbwG9YyGVckprdQeP3GFZFNCO1ZcYER_TasskXCUjG2IuQizqmlZSpKfS80UlBXAHm4y3g/exec';
+// Configured in config.js to use Vercel proxy (/api/proxy)
+// Falls back to direct Google Apps Script URL for local testing
+const API_URL = window.CONFIG?.API_URL || '/api/proxy';
+const DIRECT_API_URL = window.CONFIG?.DIRECT_API_URL || 'https://script.google.com/macros/s/AKfycbwG9YyGVckprdQeP3GFZFNCO1ZcYER_TasskXCUjG2IuQizqmlZSpKfS80UlBXAHm4y3g/exec';
 
 // ========== API HELPER FUNCTION ==========
 async function callApi(functionName, params = {}) {
@@ -21,10 +21,28 @@ async function callApi(functionName, params = {}) {
         body.append('action', functionName);
         body.append('params', JSON.stringify(params));
         
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            body: body
-        });
+        let response;
+        let useDirectUrl = false;
+
+        try {
+            // Try primary URL first (Vercel proxy on production, /api/proxy in development)
+            response = await fetch(API_URL, {
+                method: 'POST',
+                body: body
+            });
+        } catch (proxyError) {
+            // If proxy fails (e.g., on localhost), try direct URL
+            console.warn('⚠️ Proxy failed, trying direct API URL...', proxyError);
+            useDirectUrl = true;
+            try {
+                response = await fetch(DIRECT_API_URL, {
+                    method: 'POST',
+                    body: body
+                });
+            } catch (directError) {
+                throw new Error(`Both proxy and direct API failed: ${directError.message}`);
+            }
+        }
 
         // Handle both JSON and text responses
         const contentType = response.headers.get('content-type');
