@@ -152,6 +152,7 @@ async function addNewRoom() {
     }
 
     const data = await callApi('addRoom', {
+        propertyId: 'DEFAULT',  // Single property mode
         roomName: name,
         floor: parseInt(floor),
         price: parseFloat(price),
@@ -220,12 +221,12 @@ async function loadBills() {
     console.log('💰 Loading bills...');
     const data = await callApi('getUnpaidBills');
     
-    if (data.success && data.bills) {
+    if (data.success && data.bills && data.bills.reminders) {
         let html = '';
-        if (data.bills.length === 0) {
+        if (data.bills.reminders.length === 0) {
             html = '<tr><td colspan="7" class="text-center py-3 text-muted">Tất cả hóa đơn đã được thanh toán ✅</td></tr>';
         } else {
-            data.bills.forEach(bill => {
+            data.bills.reminders.forEach(bill => {
                 html += `
                     <tr>
                         <td><small class="text-muted">${bill.transId || '-'}</small></td>

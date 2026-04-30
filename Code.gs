@@ -1115,7 +1115,8 @@ function apiRouter(action, params) {
       return { success: true, message: 'Báo cáo được lưu thành công' };
     
     case 'getUnpaidBills':
-      return { success: true, bills: getUnpaidBills() };
+      var unpaidData = getUnpaidBills();
+      return { success: true, bills: unpaidData.reminders || [], unpaidCount: unpaidData.unpaidCount || 0 };
     
     case 'markBillAsPaid':
       markBillAsPaid(params.transId);
