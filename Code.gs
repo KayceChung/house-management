@@ -216,6 +216,7 @@ function getDashboardStats() {
     
     var monthlyRevenue = 0;
     var unpaidAmount = 0;
+    var unpaidCount = 0;
     
     for (var i = 0; i < transData.length; i++) {
       if (transData[i][3] == currentMonth && transData[i][4] == currentYear) {
@@ -223,6 +224,7 @@ function getDashboardStats() {
           monthlyRevenue += (transData[i][5] || 0);
         } else {
           unpaidAmount += (transData[i][5] || 0);
+          unpaidCount++;
         }
       }
     }
@@ -237,6 +239,7 @@ function getDashboardStats() {
         totalTenants: tenantData.length,
         monthlyRevenue: monthlyRevenue,
         unpaidAmount: unpaidAmount,
+        unpaidCount: unpaidCount,
         currentMonth: currentMonth,
         currentYear: currentYear
       }

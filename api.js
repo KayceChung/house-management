@@ -12,18 +12,39 @@ async function callApi(functionName, params = {}) {
     }
 
     try {
-        console.log(`📡 Calling API: ${functionName}`, params);
+        console.log(`📡 [Frontend] Calling API: ${functionName}`);
+        console.log(`📡 [Frontend] Parameters:`, params);
+        
+        // Validate params are not undefined
+        for (const [key, value] of Object.entries(params)) {
+            if (value === undefined) {
+                console.warn(`⚠️ [Frontend] Parameter '${key}' is undefined!`);
+            }
+        }
         
         // Use form-urlencoded to avoid CORS preflight OPTIONS request
-        // DON'T set Content-Type header - let URLSearchParams auto-set it!
         const body = new URLSearchParams();
         body.append('action', functionName);
         body.append('params', JSON.stringify(params));
         
+        console.log(`📡 [Frontend] Sending to: ${API_URL}`);
+        console.log(`📡 [Frontend] Body preview: ${body.toString().substring(0, 100)}...`);
+        
         const response = await fetch(API_URL, {
             method: 'POST',
-            body: body
+            body: body,
+            headers: {
+                // Content-Type will be auto-set by URLSearchParams
+            }
         });
+
+        console.log(`📡 [Frontend] Response status: ${response.status}`);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ [Frontend] HTTP Error ${response.status}:`, errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 200)}`);
+        }
 
         // Handle both JSON and text responses
         const contentType = response.headers.get('content-type');
@@ -37,14 +58,15 @@ async function callApi(functionName, params = {}) {
                 data = JSON.parse(text);
             } catch (e) {
                 console.error('❌ Response is not JSON:', text);
-                throw new Error('Server returned non-JSON response: ' + text);
+                throw new Error('Server returned non-JSON response: ' + text.substring(0, 200));
             }
         }
 
-        console.log(`✅ API Response:`, data);
+        console.log(`✅ [Frontend] API Response:`, data);
         return data;
     } catch (error) {
-        console.error('❌ API Error:', error);
+        console.error('❌ [Frontend] API Error:', error.message);
+        console.error('❌ [Frontend] Error Stack:', error.stack);
         return { success: false, message: 'Lỗi kết nối API: ' + error.message };
     }
 }
@@ -87,21 +109,62 @@ function switchTab(tabName) {
 
 // ========== DASHBOARD ==========
 async function loadDashboard() {
-    console.log('📊 Loading dashboard...');
-    const data = await callApi('getDashboardStats');
-    
-    if (data.success && data.stats) {
-        document.getElementById('totalRooms').textContent = data.stats.totalRooms || 0;
-        document.getElementById('occupiedRooms').textContent = data.stats.occupiedRooms || 0;
-        document.getElementById('unpaidCount').textContent = data.stats.unpaidCount || 0;
+    try {
+        console.log('📊 Loading dashboard...');
+        const data = await callApi('getDashboardStats');
         
-        const revenue = (data.stats.monthlyRevenue || 0);
-        document.getElementById('monthlyRevenue').textContent = 
-            revenue >= 1000000 
-                ? (revenue / 1000000).toFixed(1) + 'M' 
-                : (revenue / 1000).toFixed(0) + 'K';
-    } else {
-        console.error('❌ Failed to load dashboard');
+        // Enhanced error checking with detailed logging
+        if (!data) {
+            console.error('❌ Failed to load dashboard: No data returned from API');
+            return;
+        }
+        
+        console.log('📊 API Response structure:', {
+            success: data?.success,
+            hasStats: !!data?.stats,
+            statsKeys: Object.keys(data?.stats || {})
+        });
+        
+        if (data.success && data.stats) {
+            // Use optional chaining (?.) to safely access nested properties
+            const stats = data.stats;
+            const totalRooms = stats?.totalRooms ?? 0;
+            const occupiedRooms = stats?.occupiedRooms ?? 0;
+            const unpaidCount = stats?.unpaidCount ?? 0;
+            const monthlyRevenue = stats?.monthlyRevenue ?? 0;
+            
+            // Update UI with data (with fallback values)
+            document.getElementById('totalRooms').textContent = totalRooms;
+            document.getElementById('occupiedRooms').textContent = occupiedRooms;
+            document.getElementById('unpaidCount').textContent = unpaidCount;
+            
+            // Format revenue: 1000000+ shows as "M", others as "K"
+            const formattedRevenue = monthlyRevenue >= 1000000 
+                ? (monthlyRevenue / 1000000).toFixed(1) + 'M' 
+                : (monthlyRevenue / 1000).toFixed(0) + 'K';
+            document.getElementById('monthlyRevenue').textContent = formattedRevenue;
+            
+            console.log(`✅ Dashboard loaded successfully - Rooms: ${totalRooms}, Occupied: ${occupiedRooms}, Unpaid: ${unpaidCount}, Revenue: ${formattedRevenue}`);
+        } else {
+            const errorMsg = data?.message || 'Unknown error';
+            console.error(`❌ Failed to load dashboard: ${errorMsg}`);
+            console.error('❌ Response data:', data);
+            
+            // Set default values on error
+            document.getElementById('totalRooms').textContent = '-';
+            document.getElementById('occupiedRooms').textContent = '-';
+            document.getElementById('unpaidCount').textContent = '-';
+            document.getElementById('monthlyRevenue').textContent = '-';
+        }
+    } catch (error) {
+        console.error('❌ Dashboard loading error:', error);
+        console.error('❌ Error stack:', error.stack);
+        
+        // Set default values on exception
+        document.getElementById('totalRooms').textContent = '-';
+        document.getElementById('occupiedRooms').textContent = '-';
+        document.getElementById('unpaidCount').textContent = '-';
+        document.getElementById('monthlyRevenue').textContent = '-';
     }
 }
 

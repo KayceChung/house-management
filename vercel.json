@@ -18,11 +18,7 @@
   ],
   "rewrites": [
     {
-      "source": "/api/proxy",
-      "destination": "https://script.google.com/macros/s/AKfycbyt_N5TNEiCZ5VAxaP0wegFOWsEg46ePhrScpifqFjAhUnd7fR_GqVlx3vl--lYBBDy/exec"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/((?!api/.*).)*$",
       "destination": "/index.html"
     }
   ]

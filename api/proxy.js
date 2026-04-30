@@ -21,21 +21,40 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('📡 [Proxy] Incoming request method:', req.method);
+    console.log('📡 [Proxy] Content-Type:', req.headers['content-type']);
+    console.log('📡 [Proxy] Raw body type:', typeof req.body);
+    console.log('📡 [Proxy] Raw body preview:', req.body?.toString().substring(0, 200));
+
     // Parse form-urlencoded body from client
     let action, params;
     
     if (req.headers['content-type']?.includes('application/x-www-form-urlencoded')) {
-      // Parse form-urlencoded data
+      // Parse form-urlencoded data manually (Vercel doesn't auto-parse)
+      const bodyString = typeof req.body === 'string' ? req.body : req.body?.toString() || '';
+      console.log('📡 [Proxy] Parsing form-urlencoded:', bodyString);
+      
       const querystring = require('querystring');
-      const parsed = querystring.parse(req.body);
+      const parsed = querystring.parse(bodyString);
+      
+      console.log('📡 [Proxy] Parsed data:', { action: parsed.action, paramsLength: parsed.params?.length });
+      
       action = parsed.action;
       params = parsed.params ? JSON.parse(parsed.params) : {};
-    } else {
+    } else if (req.headers['content-type']?.includes('application/json')) {
       // Parse JSON body
-      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      const bodyString = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+      const body = JSON.parse(bodyString);
       action = body.action;
       params = body.params;
+    } else {
+      return res.status(400).json({ 
+        error: 'Unsupported Content-Type',
+        received: req.headers['content-type']
+      });
     }
+
+    console.log('📡 [Proxy] Extracted action:', action, 'Params keys:', Object.keys(params || {}));
 
     if (!action) {
       return res.status(400).json({ error: 'Missing action parameter' });
@@ -49,6 +68,8 @@ export default async function handler(req, res) {
     formData.append('action', action);
     formData.append('params', JSON.stringify(params || {}));
 
+    console.log('📡 [Proxy] Forwarding to GAS:', { action, paramKeys: Object.keys(params) });
+
     // Call Google Apps Script
     const response = await fetch(scriptUrl, {
       method: 'POST',
@@ -58,18 +79,32 @@ export default async function handler(req, res) {
       }
     });
 
+    const responseText = await response.text();
+    console.log('📡 [Proxy] GAS Response status:', response.status);
+    console.log('📡 [Proxy] GAS Response preview:', responseText.substring(0, 200));
+
     if (!response.ok) {
       return res.status(response.status).json({
         success: false,
-        message: `Google Apps Script error: ${response.status}`
+        message: `Google Apps Script error: ${response.status}`,
+        details: responseText.substring(0, 500)
       });
     }
 
-    const data = await response.json();
-    return res.status(200).json(data);
+    try {
+      const data = JSON.parse(responseText);
+      return res.status(200).json(data);
+    } catch (parseError) {
+      console.error('📡 [Proxy] Failed to parse GAS response:', parseError);
+      return res.status(500).json({
+        success: false,
+        message: 'Invalid JSON response from Google Apps Script'
+      });
+    }
 
   } catch (error) {
-    console.error('Proxy error:', error);
+    console.error('❌ [Proxy] Error:', error.message);
+    console.error('❌ [Proxy] Stack:', error.stack);
     return res.status(500).json({
       success: false,
       message: `Proxy error: ${error.message}`
