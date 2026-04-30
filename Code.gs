@@ -20,6 +20,7 @@ var CONTRACTS = 'Contracts';
 var UTILITY_USAGE = 'UtilityUsage';
 var TRANSACTIONS = 'Transactions';
 var ASSETS = 'Assets';
+var PAYMENT_REMINDERS = 'PaymentReminders';
 
 // ==========================================
 // DATABASE INITIALIZATION
@@ -39,11 +40,12 @@ function initDatabase() {
     
     // Rooms and related sheets with PropertyID
     createSheet(ROOMS, ['RoomID', 'PropertyID', 'RoomName', 'Floor', 'Status', 'Price', 'Description']);
-    createSheet(TENANTS, ['TenantID', 'PropertyID', 'FullName', 'Phone', 'IDCard', 'Email', 'RoomID', 'JoinDate']);
+    createSheet(TENANTS, ['TenantID', 'PropertyID', 'FullName', 'Phone', 'IDCard', 'Email', 'RoomID', 'PaymentReminderDay', 'JoinDate']);
     createSheet(CONTRACTS, ['ContractID', 'PropertyID', 'RoomID', 'TenantID', 'StartDate', 'EndDate', 'Deposit', 'Terms']);
     createSheet(UTILITY_USAGE, ['ID', 'PropertyID', 'Month', 'Year', 'RoomID', 'PrevElec', 'CurrElec', 'PrevWater', 'CurrWater', 'Status']);
     createSheet(TRANSACTIONS, ['TransID', 'PropertyID', 'RoomID', 'Month', 'Year', 'TotalAmount', 'PaymentStatus', 'PaidDate']);
     createSheet(ASSETS, ['AssetID', 'PropertyID', 'RoomID', 'ItemName', 'Condition', 'Quantity']);
+    createSheet(PAYMENT_REMINDERS, ['ReminderID', 'TenantID', 'Month', 'Year', 'ReminderType', 'ScheduledDate', 'Status', 'SentDate', 'Message', 'Response']);
     
     Logger.log('Database initialized successfully!');
     return {
@@ -204,7 +206,7 @@ function getDashboardStats() {
     var totalRooms = roomsData.length;
     var emptyRooms = 0;
     for (var i = 0; i < roomsData.length; i++) {
-      if (roomsData[i][3] === 'Trống') emptyRooms++;
+      if (roomsData[i][4] === 'Trống') emptyRooms++;
     }
     var occupiedRooms = totalRooms - emptyRooms;
     
@@ -216,11 +218,11 @@ function getDashboardStats() {
     var unpaidAmount = 0;
     
     for (var i = 0; i < transData.length; i++) {
-      if (transData[i][2] == currentMonth && transData[i][3] == currentYear) {
-        if (transData[i][5] === 'Đã thu') {
-          monthlyRevenue += (transData[i][4] || 0);
+      if (transData[i][3] == currentMonth && transData[i][4] == currentYear) {
+        if (transData[i][6] === 'Đã thu') {
+          monthlyRevenue += (transData[i][5] || 0);
         } else {
-          unpaidAmount += (transData[i][4] || 0);
+          unpaidAmount += (transData[i][5] || 0);
         }
       }
     }
@@ -269,7 +271,7 @@ function calculateUtilityBill(roomId, month, year, electricPrice, waterPrice) {
     var utilityRow = null;
     
     for (var i = 1; i < utilityData.length; i++) {
-      if (utilityData[i][3] == roomId && utilityData[i][1] == month && utilityData[i][2] == year) {
+      if (utilityData[i][4] == roomId && utilityData[i][2] == month && utilityData[i][3] == year) {
         utilityRow = utilityData[i];
         break;
       }
@@ -283,15 +285,15 @@ function calculateUtilityBill(roomId, month, year, electricPrice, waterPrice) {
     var roomPrice = 0;
     for (var i = 1; i < roomsData.length; i++) {
       if (roomsData[i][0] == roomId) {
-        roomPrice = roomsData[i][4] || 0;
+        roomPrice = roomsData[i][5] || 0;
         break;
       }
     }
     
-    var prevElec = utilityRow[4] || 0;
-    var currElec = utilityRow[5] || 0;
-    var prevWater = utilityRow[6] || 0;
-    var currWater = utilityRow[7] || 0;
+    var prevElec = utilityRow[5] || 0;
+    var currElec = utilityRow[6] || 0;
+    var prevWater = utilityRow[7] || 0;
+    var currWater = utilityRow[8] || 0;
     
     var elecUsage = Math.max(0, currElec - prevElec);
     var waterUsage = Math.max(0, currWater - prevWater);
@@ -301,7 +303,7 @@ function calculateUtilityBill(roomId, month, year, electricPrice, waterPrice) {
     var totalAmount = roomPrice + elecCost + waterCost;
     
     var transId = generateId('TRANS');
-    transSheet.appendRow([transId, roomId, month, year, totalAmount, 'Chưa thu', formatDateVN(new Date())]);
+    transSheet.appendRow([transId, '', roomId, month, year, totalAmount, 'Chưa thu', formatDateVN(new Date())]);
     
     Logger.log('Bill calculated for room ' + roomId);
     return {
@@ -338,10 +340,10 @@ function submitUtilityReading(roomId, currentElec, currentWater, phone) {
     var found = false;
     
     for (var i = 1; i < existingData.length; i++) {
-      if (existingData[i][3] == roomId && existingData[i][1] == month && existingData[i][2] == year) {
-        utilitySheet.getRange(i + 1, 6).setValue(currentElec);
-        utilitySheet.getRange(i + 1, 8).setValue(currentWater);
-        utilitySheet.getRange(i + 1, 9).setValue('Đã báo cáo');
+      if (existingData[i][4] == roomId && existingData[i][2] == month && existingData[i][3] == year) {
+        utilitySheet.getRange(i + 1, 7).setValue(currentElec);
+        utilitySheet.getRange(i + 1, 9).setValue(currentWater);
+        utilitySheet.getRange(i + 1, 10).setValue('Đã báo cáo');
         found = true;
         break;
       }
@@ -349,7 +351,7 @@ function submitUtilityReading(roomId, currentElec, currentWater, phone) {
     
     if (!found) {
       var newId = generateId('UTIL');
-      utilitySheet.appendRow([newId, month, year, roomId, 0, currentElec, 0, currentWater, 'Đã báo cáo']);
+      utilitySheet.appendRow([newId, '', month, year, roomId, 0, currentElec, 0, currentWater, 'Đã báo cáo']);
     }
     
     Logger.log('Utility reading submitted for room ' + roomId);
@@ -383,11 +385,11 @@ function getUnpaidBills() {
     
     var unpaidBills = [];
     for (var i = 1; i < transData.length; i++) {
-      if (transData[i][5] === 'Chưa thu') {
-        var roomId = transData[i][1];
+      if (transData[i][6] === 'Chưa thu') {
+        var roomId = transData[i][2];
         var tenant = null;
         for (var j = 1; j < tenantData.length; j++) {
-          if (tenantData[j][5] == roomId) {
+          if (tenantData[j][6] == roomId) {
             tenant = tenantData[j];
             break;
           }
@@ -396,11 +398,12 @@ function getUnpaidBills() {
         unpaidBills.push({
           transId: transData[i][0],
           roomId: roomId,
-          amount: transData[i][4],
-          month: transData[i][2],
-          year: transData[i][3],
-          tenantName: tenant ? tenant[1] : 'Unknown',
-          tenantPhone: tenant ? tenant[2] : 'N/A'
+          amount: transData[i][5],
+          month: transData[i][3],
+          year: transData[i][4],
+          tenantName: tenant ? tenant[2] : 'Unknown',
+          tenantPhone: tenant ? tenant[3] : 'N/A',
+          tenantEmail: tenant ? tenant[5] : 'N/A'
         });
       }
     }
@@ -637,6 +640,339 @@ function getAllProperties() {
   }
 }
 
+// ==========================================
+// PAYMENT REMINDER SYSTEM (EMAIL)
+// ==========================================
+
+/**
+ * Setup automatic payment reminder trigger
+ * RUN THIS ONCE to enable automatic emails
+ */
+function setupPaymentReminderTrigger() {
+  try {
+    // Remove existing triggers first
+    var triggers = ScriptApp.getProjectTriggers();
+    for (var i = 0; i < triggers.length; i++) {
+      if (triggers[i].getHandlerFunction() == 'checkAndSendPaymentReminders') {
+        ScriptApp.deleteTrigger(triggers[i]);
+      }
+    }
+    
+    // Create new time-based trigger (every day at 8 AM)
+    ScriptApp.newTrigger('checkAndSendPaymentReminders')
+      .timeBased()
+      .atHour(8)
+      .everyDays(1)
+      .create();
+    
+    Logger.log('Payment reminder trigger setup successfully!');
+    return {
+      success: true,
+      message: 'Trigger setup successfully! Reminders will be sent daily at 8 AM.'
+    };
+  } catch (error) {
+    Logger.log('Error in setupPaymentReminderTrigger: ' + error.toString());
+    return { success: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Check and send payment reminders (Main function - runs daily)
+ */
+function checkAndSendPaymentReminders() {
+  try {
+    var today = new Date();
+    var currentDay = today.getDate();
+    var currentMonth = today.getMonth() + 1;
+    var currentYear = today.getFullYear();
+    
+    Logger.log('=== Payment Reminder Check: ' + formatDateVN(today) + ' ===');
+    
+    var tenantsSheet = SPREADSHEET.getSheetByName(TENANTS);
+    var transSheet = SPREADSHEET.getSheetByName(TRANSACTIONS);
+    
+    if (!tenantsSheet || !transSheet) {
+      Logger.log('ERROR: Required sheets not found');
+      return;
+    }
+    
+    var tenantsData = tenantsSheet.getDataRange().getValues();
+    var transData = transSheet.getDataRange().getValues();
+    
+    var remindersSent = 0;
+    
+    // Loop through all tenants
+    for (var i = 1; i < tenantsData.length; i++) {
+      if (tenantsData[i][0] === '') continue; // Skip empty rows
+      
+      var tenantId = tenantsData[i][0];
+      var fullName = tenantsData[i][2];
+      var email = tenantsData[i][5];
+      var reminderDay = tenantsData[i][7] || 25; // Default to 25th
+      
+      // Check if today is the reminder day
+      if (currentDay === reminderDay && email) {
+        // Find unpaid bills for this tenant
+        var unpaidBills = [];
+        for (var j = 1; j < transData.length; j++) {
+          var transRoomId = transData[j][2];
+          var transTenantMonth = transData[j][3];
+          var transTenantYear = transData[j][4];
+          var paymentStatus = transData[j][6];
+          var amount = transData[j][5];
+          
+          // Find if this room belongs to this tenant
+          for (var k = 1; k < tenantsData.length; k++) {
+            if (tenantsData[k][0] === tenantId && tenantsData[k][6] === transRoomId) {
+              if (paymentStatus === 'Chưa thu') {
+                unpaidBills.push({
+                  month: transTenantMonth,
+                  year: transTenantYear,
+                  amount: amount,
+                  transId: transData[j][0]
+                });
+              }
+              break;
+            }
+          }
+        }
+        
+        // Send email if there are unpaid bills
+        if (unpaidBills.length > 0) {
+          var result = sendPaymentReminderEmail(tenantId, fullName, email, unpaidBills);
+          if (result.success) {
+            remindersSent++;
+          }
+        }
+      }
+    }
+    
+    Logger.log('Total reminders sent: ' + remindersSent);
+    return {
+      success: true,
+      remindersSent: remindersSent,
+      message: 'Checked and sent ' + remindersSent + ' reminders'
+    };
+  } catch (error) {
+    Logger.log('Error in checkAndSendPaymentReminders: ' + error.toString());
+  }
+}
+
+/**
+ * Send payment reminder email to tenant
+ */
+function sendPaymentReminderEmail(tenantId, fullName, email, unpaidBills) {
+  try {
+    if (!email) {
+      return { success: false, message: 'Email address not provided' };
+    }
+    
+    var subject = '💰 Nhắc nhở: Thanh toán tiền phòng tháng này';
+    var message = buildReminderEmailContent(fullName, unpaidBills);
+    
+    // Send email
+    GmailApp.sendEmail(email, subject, message, {
+      htmlBody: message
+    });
+    
+    // Log to PaymentReminders sheet
+    var remindersSheet = SPREADSHEET.getSheetByName(PAYMENT_REMINDERS);
+    var reminderId = generateId('REM');
+    var today = new Date();
+    var month = today.getMonth() + 1;
+    var year = today.getFullYear();
+    
+    remindersSheet.appendRow([
+      reminderId,
+      tenantId,
+      month,
+      year,
+      'Email',
+      formatDateVN(today),
+      'Sent',
+      formatDateVN(today),
+      message,
+      'Success'
+    ]);
+    
+    Logger.log('Payment reminder email sent to: ' + email);
+    return {
+      success: true,
+      reminderId: reminderId,
+      message: 'Email sent successfully to ' + fullName
+    };
+  } catch (error) {
+    Logger.log('Error in sendPaymentReminderEmail: ' + error.toString());
+    
+    // Log failed attempt
+    var remindersSheet = SPREADSHEET.getSheetByName(PAYMENT_REMINDERS);
+    var reminderId = generateId('REM');
+    var today = new Date();
+    var month = today.getMonth() + 1;
+    var year = today.getFullYear();
+    
+    remindersSheet.appendRow([
+      reminderId,
+      tenantId,
+      month,
+      year,
+      'Email',
+      formatDateVN(today),
+      'Failed',
+      formatDateVN(today),
+      '',
+      error.toString()
+    ]);
+    
+    return { success: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Build HTML email content for payment reminder
+ */
+function buildReminderEmailContent(fullName, unpaidBills) {
+  var html = '<html><body style="font-family: Arial, sans-serif; color: #333;">';
+  html += '<div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px;">';
+  html += '<h2 style="color: #d9534f;">💰 Nhắc Nhở Thanh Toán</h2>';
+  html += '<p>Xin chào <strong>' + fullName + '</strong>,</p>';
+  html += '<p>Chúng tôi nhắc nhở bạn rằng bạn có <strong style="color: #d9534f;">' + unpaidBills.length + ' hóa đơn chưa thanh toán</strong>:</p>';
+  
+  html += '<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">';
+  html += '<tr style="background-color: #2c3e50; color: white;">';
+  html += '<th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Tháng</th>';
+  html += '<th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Năm</th>';
+  html += '<th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Số Tiền</th>';
+  html += '</tr>';
+  
+  var totalAmount = 0;
+  for (var i = 0; i < unpaidBills.length; i++) {
+    var bill = unpaidBills[i];
+    totalAmount += bill.amount;
+    html += '<tr>';
+    html += '<td style="padding: 10px; border: 1px solid #ddd;">' + bill.month + '</td>';
+    html += '<td style="padding: 10px; border: 1px solid #ddd;">' + bill.year + '</td>';
+    html += '<td style="padding: 10px; text-align: right; border: 1px solid #ddd;">' + formatCurrency(bill.amount) + '</td>';
+    html += '</tr>';
+  }
+  
+  html += '<tr style="background-color: #ecf0f1; font-weight: bold;">';
+  html += '<td colspan="2" style="padding: 10px; border: 1px solid #ddd;">Tổng Cộng:</td>';
+  html += '<td style="padding: 10px; text-align: right; border: 1px solid #ddd; color: #d9534f;">' + formatCurrency(totalAmount) + '</td>';
+  html += '</tr>';
+  html += '</table>';
+  
+  html += '<p style="margin-top: 20px;">⏰ <strong>Vui lòng thanh toán trước cuối tháng</strong> để tránh các phí phạt.</p>';
+  html += '<p>Nếu bạn đã thanh toán, vui lòng bỏ qua thông báo này.</p>';
+  html += '<p>Liên hệ quản lý nếu có bất kỳ thắc mắc nào.</p>';
+  html += '<p style="margin-top: 30px; font-size: 12px; color: #999;">---<br/>Hệ thống quản lý nhà trọ tự động</p>';
+  html += '</div></body></html>';
+  
+  return html;
+}
+
+/**
+ * Format currency (VND)
+ */
+function formatCurrency(amount) {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+}
+
+/**
+ * Manually send payment reminder to specific tenant (for testing)
+ */
+function sendManualPaymentReminder(tenantId) {
+  try {
+    var tenantsSheet = SPREADSHEET.getSheetByName(TENANTS);
+    var transSheet = SPREADSHEET.getSheetByName(TRANSACTIONS);
+    
+    if (!tenantsSheet || !transSheet) {
+      return { success: false, message: 'Sheets not found' };
+    }
+    
+    var tenantsData = tenantsSheet.getDataRange().getValues();
+    var transData = transSheet.getDataRange().getValues();
+    
+    var tenantInfo = null;
+    
+    // Find tenant
+    for (var i = 1; i < tenantsData.length; i++) {
+      if (tenantsData[i][0] === tenantId) {
+        tenantInfo = {
+          id: tenantsData[i][0],
+          name: tenantsData[i][2],
+          email: tenantsData[i][5],
+          roomId: tenantsData[i][6]
+        };
+        break;
+      }
+    }
+    
+    if (!tenantInfo) {
+      return { success: false, message: 'Tenant not found' };
+    }
+    
+    // Find unpaid bills
+    var unpaidBills = [];
+    for (var j = 1; j < transData.length; j++) {
+      if (transData[j][2] === tenantInfo.roomId && transData[j][6] === 'Chưa thu') {
+        unpaidBills.push({
+          month: transData[j][3],
+          year: transData[j][4],
+          amount: transData[j][5],
+          transId: transData[j][0]
+        });
+      }
+    }
+    
+    if (unpaidBills.length === 0) {
+      return { success: false, message: 'No unpaid bills found for this tenant' };
+    }
+    
+    return sendPaymentReminderEmail(tenantInfo.id, tenantInfo.name, tenantInfo.email, unpaidBills);
+  } catch (error) {
+    Logger.log('Error in sendManualPaymentReminder: ' + error.toString());
+    return { success: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+/**
+ * Get payment reminder history
+ */
+function getPaymentReminderHistory(tenantId) {
+  try {
+    var remindersSheet = SPREADSHEET.getSheetByName(PAYMENT_REMINDERS);
+    if (!remindersSheet) {
+      return { success: false, message: 'PaymentReminders sheet not found' };
+    }
+    
+    var data = remindersSheet.getDataRange().getValues();
+    var history = [];
+    
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === '') continue;
+      if (data[i][1] === tenantId) {
+        history.push({
+          reminderId: data[i][0],
+          tenantId: data[i][1],
+          month: data[i][2],
+          year: data[i][3],
+          reminderType: data[i][4],
+          scheduledDate: data[i][5],
+          status: data[i][6],
+          sentDate: data[i][7],
+          response: data[i][9]
+        });
+      }
+    }
+    
+    return { success: true, history: history, count: history.length };
+  } catch (error) {
+    Logger.log('Error in getPaymentReminderHistory: ' + error.toString());
+    return { success: false, message: 'Error: ' + error.toString() };
+  }
+}
+
 /**
  * Handle POST requests from frontend
  * Endpoint: POST /usercodeapp
@@ -706,10 +1042,23 @@ function apiRouter(action, params) {
     
     // Tenant functions
     case 'getAllTenants':
-      return { success: true, tenants: getAllTenants() };
+      return getAllTenants();
     
     case 'addTenant':
       return addTenant(params.fullName, params.phone, params.idCard, params.email, params.roomId);
+    
+    // Payment Reminder functions
+    case 'setupPaymentReminderTrigger':
+      return setupPaymentReminderTrigger();
+    
+    case 'checkAndSendPaymentReminders':
+      return checkAndSendPaymentReminders();
+    
+    case 'sendManualPaymentReminder':
+      return sendManualPaymentReminder(params.tenantId);
+    
+    case 'getPaymentReminderHistory':
+      return getPaymentReminderHistory(params.tenantId);
     
     default:
       return { success: false, message: 'Action not found: ' + action };
@@ -734,16 +1083,18 @@ function getAllTenants() {
     
     tenants.push({
       tenantId: data[i][0],
-      fullName: data[i][1],
-      phone: data[i][2],
-      idCard: data[i][3],
-      email: data[i][4],
-      roomId: data[i][5],
-      joinDate: data[i][6]
+      propertyId: data[i][1],
+      fullName: data[i][2],
+      phone: data[i][3],
+      idCard: data[i][4],
+      email: data[i][5],
+      roomId: data[i][6],
+      paymentReminderDay: data[i][7] || 25,
+      joinDate: data[i][8]
     });
   }
   
-  return tenants;
+  return { success: true, tenants: tenants, count: tenants.length };
 }
 
 /**
@@ -751,22 +1102,35 @@ function getAllTenants() {
  */
 function addTenant(fullName, phone, idCard, email, roomId) {
   var sheet = SPREADSHEET.getSheetByName(TENANTS);
+  var roomsSheet = SPREADSHEET.getSheetByName(ROOMS);
+  
   var tenantId = generateId('TENANT');
   var joinDate = Utilities.formatDate(new Date(), 'GMT+7', 'dd/MM/yyyy');
   
-  // Add tenant data
-  sheet.appendRow([tenantId, fullName, phone, idCard, email, roomId, joinDate]);
-  
-  // Update room status to "Đã Cho Thuê" (Occupied)
-  var roomsSheet = SPREADSHEET.getSheetByName(ROOMS);
+  // Find PropertyID from RoomID
+  var propertyId = '';
   var roomsData = roomsSheet.getDataRange().getValues();
-  
-  for (var i = 1; i < roomsData.length; i++) {
-    if (roomsData[i][0] === roomId) {
-      roomsSheet.getRange(i + 1, 4).setValue('Đã Cho Thuê');
+  for (var k = 1; k < roomsData.length; k++) {
+    if (roomsData[k][0] === roomId) {
+      propertyId = roomsData[k][1];
       break;
     }
   }
   
-  return tenantId;
+  // Add tenant data with PropertyID and PaymentReminderDay (default 25)
+  sheet.appendRow([tenantId, propertyId, fullName, phone, idCard, email, roomId, 25, joinDate]);
+  
+  // Update room status to "Đã Cho Thuê" (Occupied)
+  for (var i = 1; i < roomsData.length; i++) {
+    if (roomsData[i][0] === roomId) {
+      roomsSheet.getRange(i + 1, 5).setValue('Đã Cho Thuê');
+      break;
+    }
+  }
+  
+  return {
+    success: true,
+    tenantId: tenantId,
+    message: 'Khách hàng ' + fullName + ' được thêm thành công'
+  };
 }
