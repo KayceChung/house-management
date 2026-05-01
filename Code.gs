@@ -2072,6 +2072,14 @@ function getAllTenants() {
   for (var i = 1; i < data.length; i++) {
     if (data[i][0] === '') continue; // Skip empty rows
     
+    // Format joinDate to dd/MM/yyyy if it's a Date object
+    var joinDate = data[i][8];
+    if (joinDate instanceof Date) {
+      joinDate = Utilities.formatDate(joinDate, 'GMT+7', 'dd/MM/yyyy');
+    } else if (joinDate && typeof joinDate !== 'string') {
+      joinDate = String(joinDate);
+    }
+    
     tenants.push({
       tenantId: data[i][0],
       propertyId: data[i][1],
@@ -2081,10 +2089,11 @@ function getAllTenants() {
       email: data[i][5],
       roomId: data[i][6],
       paymentReminderDay: data[i][7] || 25,
-      joinDate: data[i][8]
+      joinDate: joinDate || ''
     });
   }
   
+  Logger.log('✅ getAllTenants: ' + tenants.length + ' tenants found');
   return { success: true, tenants: tenants, count: tenants.length };
 }
 

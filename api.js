@@ -105,6 +105,7 @@ function switchTab(tabName) {
     else if (tabName === 'rooms') loadRooms();
     else if (tabName === 'bills') loadBills();
     else if (tabName === 'utilities') loadUtilityRooms();
+    else if (tabName === 'tenants') loadTenants();
 }
 
 // ========== DASHBOARD ==========
@@ -327,63 +328,175 @@ async function markBillPaid(transId) {
 // ========== TENANTS ==========
 async function loadTenants() {
     console.log('👥 Loading tenants...');
-    const data = await callApi('getAllTenants');
     
-    if (data.success && data.tenants) {
-        let html = '';
-        if (data.tenants.length === 0) {
-            html = '<tr><td colspan="7" class="text-center py-3 text-muted">Không có dữ liệu</td></tr>';
-        } else {
-            data.tenants.forEach(tenant => {
-                html += `
-                    <tr>
-                        <td><small class="text-muted">${tenant.tenantId || '-'}</small></td>
-                        <td><strong>${tenant.fullName || '-'}</strong></td>
-                        <td>${tenant.phone || '-'}</td>
-                        <td><small>${tenant.idCard || '-'}</small></td>
-                        <td><small>${tenant.email || '-'}</small></td>
-                        <td>${tenant.roomId || '-'}</td>
-                        <td><small>${tenant.joinDate || '-'}</small></td>
-                    </tr>
-                `;
-            });
+    // Show loading state
+    const tenantsTable = document.getElementById('tenantsTable');
+    if (tenantsTable) {
+        tenantsTable.innerHTML = '<tr><td colspan="7" class="text-center py-3"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>';
+    }
+    
+    try {
+        const data = await callApi('getAllTenants');
+        
+        if (!data) {
+            throw new Error('Không nhận được dữ liệu từ API');
         }
-        document.getElementById('tenantsTable').innerHTML = html;
+        
+        if (data.success && data.tenants) {
+            let html = '';
+            if (data.tenants.length === 0) {
+                html = '<tr><td colspan="7" class="text-center py-3 text-muted"><i class="fas fa-inbox"></i> Không có dữ liệu khách thuê</td></tr>';
+                console.log('ℹ️ Danh sách khách hàng trống');
+            } else {
+                data.tenants.forEach(tenant => {
+                    html += `
+                        <tr>
+                            <td><small class="text-muted">${tenant.tenantId || '-'}</small></td>
+                            <td><strong>${tenant.fullName || '-'}</strong></td>
+                            <td>${tenant.phone || '-'}</td>
+                            <td><small>${tenant.idCard || '-'}</small></td>
+                            <td><small>${tenant.email || '-'}</small></td>
+                            <td>${tenant.roomId || '-'}</td>
+                            <td><small>${tenant.joinDate || '-'}</small></td>
+                        </tr>
+                    `;
+                });
+                console.log(`✅ Đã tải ${data.tenants.length} khách hàng`);
+            }
+            
+            if (tenantsTable) {
+                tenantsTable.innerHTML = html;
+            }
+        } else {
+            const errorMsg = data?.message || 'Lỗi không xác định';
+            console.error(`❌ Lỗi từ API: ${errorMsg}`);
+            if (tenantsTable) {
+                tenantsTable.innerHTML = `<tr><td colspan="7" class="text-center py-3 text-danger"><i class="fas fa-exclamation-circle"></i> Lỗi: ${errorMsg}</td></tr>`;
+            }
+        }
+    } catch (error) {
+        console.error('❌ Lỗi khi tải danh sách khách hàng:', error);
+        if (tenantsTable) {
+            tenantsTable.innerHTML = `<tr><td colspan="7" class="text-center py-3 text-danger"><i class="fas fa-exclamation-circle"></i> Lỗi: ${error.message}</td></tr>`;
+        }
     }
 }
 
 async function loadTenantRooms() {
-    const data = await callApi('getAllRooms');
-    if (data.success && data.rooms) {
-        let options = '<option value="">-- Chọn Phòng --</option>';
-        data.rooms.forEach(room => {
-            options += `<option value="${room.roomId}">${room.roomName}</option>`;
-        });
-        document.getElementById('tenantRoomId').innerHTML = options;
-    }
-}
-
-function openAddTenantModal() {
+    console.log('🚪 Loading available rooms for tenant...');
+    
+    try {
+        const data = await callApi('getAllRooms');
+        
+        if (!data) {
+            throw new Error('Không nhận được dữ liệu phòng từ API');
+        }
+        
+        if (data.success && data.rooms) {
+            let options = '<option value="">-- Chọn Phòng Còn Trống --</option>';
+    console.log('📝 Opening Add Tenant Modal...');
+    
+    // Xóa dữ liệu cũ trong form
+    document.getElementById('tenantName').value = '';
+    document.getElementById('tenantPhone').value = '';
+    document.getElementById('tenantIdCard').value = '';
+    document.getElementById('tenantEmail').value = '';
+    document.getElementById('tenantRoomId').value = '';
+    
+    // Tải danh sách phòng còn trống
     loadTenantRooms();
-    const modal = new bootstrap.Modal(document.getElementById('addTenantModal'));
-    modal.show();
-}
-
-async function addNewTenant() {
+    
+    // Hiển thị modal
+    const modalElement = document.getElementById('addTenantModal');
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+        console.log('✅ Modal opened');
+    } else {
+        console.error('❌ Modal element not found: #addTenantModal');
+    } availableRooms = data.rooms.filter(room => room.status === 'Trống');
+            
+            if (availableRooms.length === 0) {
+                options = '<option value="">-- Không có phòng còn trống --</option>';
+                console.warn('⚠️ Không có phòng nào còn trống');
+            } else {
+                availableRooms.forEach(room => {
+                    const price = (room.price || 0).toLocaleString('vi-VN');
+                    options += `<option value="${room.roomId}">${room.roomName} - ${price}đ</option>`;
+                });
+                console.log(`✅ Đã tải ${availableRooms.length} phòng còn trống`);
+            }
+            
+            const roomSelect = document.getElementById('tenantRoomId');
+            if (roomSelect) {
+                roomSelect.innerHTML = options;
+            }
+        } else {
+            const errorMsg = data?.message || 'Lỗi không xác định';
+            console.error(`❌ Lỗi từ API: ${errorMsg}`);
+            const roomSelect = document.getElementById('tenantRoomId');
+            if (roomSelect) {
+                roomSelect.innerHTML = '<option value="">-- Lỗi tải danh sách phòng --</option>';
+        ole.log('➕ Adding new tenant...');
+    
     const name = document.getElementById('tenantName').value?.trim();
     const phone = document.getElementById('tenantPhone').value?.trim();
     const idCard = document.getElementById('tenantIdCard').value?.trim();
     const email = document.getElementById('tenantEmail').value?.trim();
     const roomId = document.getElementById('tenantRoomId').value?.trim();
 
+    // Kiểm tra dữ liệu bắt buộc
     if (!name || !phone || !roomId) {
+        console.warn('⚠️ Dữ liệu không đầy đủ:', { name, phone, roomId });
         alert('⚠️ Vui lòng điền đầy đủ thông tin (Tên, Số điện thoại, Phòng)');
         return;
     }
 
-    const data = await callApi('addTenant', {
-        fullName: name,
-        phone: phone,
+    console.log('📡 Sending tenant data:', { fullName: name, phone, idCard, email, roomId });
+
+    try {
+        const data = await callApi('addTenant', {
+            fullName: name,
+            phone: phone,
+            idCard: idCard,
+            email: email,
+            roomId: roomId
+        });
+
+        if (!data) {
+            throw new Error('Không nhận được phản hồi từ API');
+        }
+
+        if (data.success) {
+            console.log('✅ Khách hàng được thêm thành công:', data.tenantId);
+            alert('✅ Khách hàng ' + name + ' được thêm thành công!');
+            
+            // Đóng modal
+            const modalElement = document.getElementById('addTenantModal');
+            if (modalElement) {
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) {
+                    modal.hide();
+                }
+            }
+            
+            // Xóa form
+            document.getElementById('tenantName').value = '';
+            document.getElementById('tenantPhone').value = '';
+            document.getElementById('tenantIdCard').value = '';
+            document.getElementById('tenantEmail').value = '';
+            document.getElementById('tenantRoomId').value = '';
+            
+            // Tải lại danh sách
+            loadTenants();
+        } else {
+            const errorMsg = data?.message || 'Lỗi không xác định';
+            console.error('❌ Lỗi từ API:', errorMsg);
+            alert('❌ Lỗi: ' + errorMsg);
+        }
+    } catch (error) {
+        console.error('❌ Lỗi khi thêm khách hàng:', error);
+        alert('❌ Lỗi: ' + error.message
         idCard: idCard,
         email: email,
         roomId: roomId
