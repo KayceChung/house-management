@@ -1,0 +1,305 @@
+/**
+ * PHASE 1.1: ENHANCED DASHBOARD - HTML STRUCTURE
+ * Cấu trúc HTML cần thêm vào index.html
+ * 
+ * THAY THẾ: Phần dashboard cũ (dòng ~330) bằng đoạn code dưới đây
+ */
+
+<!--
+================== UPDATED DASHBOARD SECTION ==================
+Tìm: <div id="dashboard" class="tab-content">...</div>
+Thay bằng:
+-->
+
+<div id="dashboard" class="tab-content active">
+    <div class="main-content">
+        <!-- Dashboard Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="section-title">📊 Dashboard Tổng Quan</h5>
+            <small class="text-muted" id="dashboardRefreshTime"></small>
+        </div>
+
+        <!-- KPI Cards Row (Keep Existing 4 Stats) -->
+        <div class="row mb-4">
+            <div class="col-md-6 col-lg-3 mb-3">
+                <div class="card stat-card stat-card-border" style="border-left-color: #3498db;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <p class="card-text text-muted mb-1">Tổng Phòng</p>
+                                <h3 class="card-title mb-0" id="totalRooms">-</h3>
+                            </div>
+                            <i class="fas fa-door-open stat-icon text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3 mb-3">
+                <div class="card stat-card stat-card-border" style="border-left-color: #27ae60;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <p class="card-text text-muted mb-1">Phòng Đã Cho Thuê</p>
+                                <h3 class="card-title mb-0" id="occupiedRooms">-</h3>
+                            </div>
+                            <i class="fas fa-check-circle stat-icon text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3 mb-3">
+                <div class="card stat-card stat-card-border" style="border-left-color: #e74c3c;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <p class="card-text text-muted mb-1">Hóa Đơn Chưa Thu</p>
+                                <h3 class="card-title mb-0" id="unpaidCount">-</h3>
+                            </div>
+                            <i class="fas fa-file-invoice-dollar stat-icon text-danger"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3 mb-3">
+                <div class="card stat-card stat-card-border" style="border-left-color: #f39c12;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <p class="card-text text-muted mb-1">Doanh Thu Tháng</p>
+                                <h3 class="card-title mb-0" id="monthlyRevenue">-</h3>
+                            </div>
+                            <i class="fas fa-chart-line stat-icon text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <!-- Monthly Revenue Chart -->
+            <div class="col-lg-8 mb-3">
+                <div class="card">
+                    <div class="card-header" style="background: linear-gradient(135deg, var(--primary) 0%, #34495e 100%); color: white;">
+                        <i class="fas fa-chart-line me-2"></i>Doanh Thu 12 Tháng Gần Nhất
+                    </div>
+                    <div class="card-body">
+                        <div id="revenueChart" style="height: 350px;">
+                            <div class="text-center py-5">
+                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Room Status Chart -->
+            <div class="col-lg-4 mb-3">
+                <div class="card">
+                    <div class="card-header" style="background: linear-gradient(135deg, var(--primary) 0%, #34495e 100%); color: white;">
+                        <i class="fas fa-pie-chart me-2"></i>Trạng Thái Phòng
+                    </div>
+                    <div class="card-body">
+                        <div id="roomStatusChart" style="height: 350px;">
+                            <div class="text-center py-5">
+                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Widgets Row -->
+        <div class="row">
+            <!-- Overdue Invoices Widget -->
+            <div class="col-lg-8 mb-3">
+                <div class="card">
+                    <div class="card-header" style="background: linear-gradient(135deg, var(--primary) 0%, #34495e 100%); color: white;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>⚠️ Top 5 Hóa Đơn Quá Hạn
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="overdueInvoicesWidget">
+                            <div class="text-center py-5">
+                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Debt Widget -->
+            <div class="col-lg-4 mb-3">
+                <div class="card">
+                    <div class="card-header" style="background: linear-gradient(135deg, var(--primary) 0%, #34495e 100%); color: white;">
+                        <i class="fas fa-money-bill me-2"></i>Tổng Nợ Khách Hàng
+                    </div>
+                    <div class="card-body">
+                        <div id="debtSummaryWidget">
+                            <div class="text-center py-5">
+                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 
+================== CSS STYLES (Thêm vào <style> trong HTML) ==================
+
+Thêm những styles này vào phần <style> của index.html:
+-->
+
+<style>
+    /* Chart containers */
+    #revenueChart,
+    #roomStatusChart {
+        min-height: 350px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* ApexCharts custom styling */
+    .apexcharts-canvas {
+        margin: 0 auto;
+    }
+
+    /* Overdue invoices table */
+    #overdueInvoicesWidget .table {
+        margin-bottom: 0;
+        border-collapse: collapse;
+    }
+
+    #overdueInvoicesWidget .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    #overdueInvoicesWidget .table td {
+        vertical-align: middle;
+        padding: 12px 15px;
+    }
+
+    /* Debt widget styling */
+    #debtSummaryWidget h2 {
+        font-size: 2.5rem;
+        margin: 15px 0;
+    }
+
+    /* Status badge styling */
+    .status-badge {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .status-occupied { background-color: #d4edda; color: #155724; }
+    .status-vacant { background-color: #e2e3e5; color: #383d41; }
+    .status-maintenance { background-color: #fff3cd; color: #856404; }
+
+    /* Loading animation */
+    .spinner-border-sm {
+        width: 1.5rem;
+        height: 1.5rem;
+        border-width: 0.2em;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        #revenueChart,
+        #roomStatusChart {
+            height: 250px !important;
+        }
+
+        .row > [class*='col-'] {
+            margin-bottom: 15px;
+        }
+    }
+</style>
+
+<!-- 
+================== SCRIPTS TO LOAD ==================
+
+Thêm vào cuối <body> của index.html, sau khi tất cả HTML:
+-->
+
+<script>
+    // Load ApexCharts library
+    if (!window.ApexCharts) {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/apexcharts';
+        script.onload = function() {
+            console.log('✅ ApexCharts loaded');
+        };
+        script.onerror = function() {
+            console.error('❌ Failed to load ApexCharts');
+        };
+        document.head.appendChild(script);
+    }
+    
+    // Update refresh time display
+    function updateRefreshTime() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const element = document.getElementById('dashboardRefreshTime');
+        if (element) {
+            element.textContent = `Cập nhật lúc: ${timeStr}`;
+        }
+    }
+    
+    // Auto-refresh dashboard every 5 minutes
+    setInterval(function() {
+        if (document.getElementById('dashboard').classList.contains('active')) {
+            console.log('🔄 Auto-refreshing dashboard...');
+            loadDashboard();
+            updateRefreshTime();
+        }
+    }, 5 * 60 * 1000); // 5 minutes
+    
+    // Update time on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateRefreshTime();
+    });
+</script>
+
+<!--
+================== NEXT STEPS ==================
+
+1. Copy PHASE_1_1_BACKEND_API.gs functions vào Code.gs
+2. Thêm cases vào apiRouter() trong doPost()
+3. Cập nhật HTML dashboard section như trên
+4. Thêm PHASE_1_1_FRONTEND_CHARTS.js code vào api.js
+5. Thêm <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script> vào <head>
+6. Deploy Google Apps Script (New Version)
+7. Refresh ứng dụng và test
+
+================== TESTING CHECKLIST ==================
+
+- [ ] ApexCharts library loaded (check console)
+- [ ] Dashboard KPI cards show correct data
+- [ ] Revenue chart renders with 12 months of data
+- [ ] Room status chart shows pie with correct colors
+- [ ] Overdue invoices widget shows red-highlighted items
+- [ ] Debt summary widget shows total debt
+- [ ] Charts are responsive on mobile
+- [ ] No console errors
+- [ ] Page loads in < 2 seconds
+
+================== TROUBLESHOOTING ==================
+
+If charts don't show:
+1. Check console (F12) for errors
+2. Verify ApexCharts is loaded: console.log(ApexCharts)
+3. Check API responses: callApi('getDashboardWithCharts')
+4. Verify #revenueChart and #roomStatusChart divs exist in HTML
+5. Check network tab for failed requests
+
+-->
