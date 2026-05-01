@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧪 Test API House Management</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2c3e50;
+      --secondary: #3498db;
+      --success: #27ae60;
+      --danger: #e74c3c;
+    }
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .container-main {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .card {
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      margin-bottom: 20px;
+    }
+    .card-header {
+      background: linear-gradient(135deg, var(--primary) 0%, #34495e 100%);
+      color: white;
+      font-weight: 600;
+      border-radius: 10px 10px 0 0;
+      padding: 15px;
+    }
+    .btn-test {
+      margin: 5px;
+      border-radius: 5px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+    .btn-test:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    #result {
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid var(--secondary);
+      padding: 15px;
+      margin-top: 15px;
+      min-height: 100px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .result-success {
+      border-left-color: var(--success);
+      background-color: #f0fdf4;
+    }
+    .result-error {
+      border-left-color: var(--danger);
+      background-color: #fef2f2;
+    }
+    .result-loading {
+      border-left-color: #f39c12;
+      background-color: #fffbf0;
+    }
+    pre {
+      color: var(--primary);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin: 0;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 10px;
+    }
+    .status-success { background-color: #d4edda; color: #155724; }
+    .status-error { background-color: #f8d7da; color: #721c24; }
+    .status-loading { background-color: #fff3cd; color: #856404; }
+    .url-config {
+      background-color: #ecf0f1;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .input-group {
+      margin-bottom: 15px;
+    }
+    label {
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 5px;
+    }
+    input, textarea {
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--secondary);
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container-main">
+    <!-- Header -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div style="background: white; padding: 20px; border-radius: 10px; text-align: center;">
+          <h1 style="color: var(--primary); margin-bottom: 5px;">🧪 Test API House Management</h1>
+          <p style="color: #7f8c8d; margin: 0;">Công cụ kiểm tra kết nối và gọi API từ Google Apps Script</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- URL Configuration -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-cog"></i> Cấu Hình URL Deploy
+      </div>
+      <div class="card-body">
+        <div class="input-group">
+          <label>URL Deploy của Google Apps Script:</label>
+          <input type="text" id="deployUrl" class="form-control" 
+            placeholder="https://script.google.com/macros/d/xxxxx/usercontent"
+            value="https://script.google.com/macros/d/1L9...../usercontent">
+          <small class="text-muted d-block mt-2">
+            ℹ️ Copy từ <strong>Deploy</strong> → <strong>Manage deployments</strong> → URL của "Latest version"
+          </small>
+        </div>
+        <button class="btn btn-secondary" onclick="testConnection()">
+          <i class="fas fa-globe"></i> Kiểm Tra Kết Nối
+        </button>
+      </div>
+    </div>
+
+    <!-- GET Requests -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-arrow-down"></i> GET Requests
+      </div>
+      <div class="card-body">
+        <button class="btn btn-primary btn-test" onclick="testGetDashboard()">
+          <i class="fas fa-chart-bar"></i> Lấy Dashboard Stats (JSON)
+        </button>
+        <button class="btn btn-info btn-test" onclick="testGetHTML()">
+          <i class="fas fa-globe"></i> Lấy Giao Diện HTML
+        </button>
+      </div>
+    </div>
+
+    <!-- POST Requests - Manager -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-user-tie"></i> Quản Lý (Manager)
+      </div>
+      <div class="card-body">
+        <button class="btn btn-success btn-test" onclick="testAddManager()">
+          <i class="fas fa-user-plus"></i> Thêm Manager Mới
+        </button>
+        <button class="btn btn-info btn-test" onclick="testGetAllManagers()">
+          <i class="fas fa-users"></i> Lấy Danh Sách Manager
+        </button>
+      </div>
+    </div>
+
+    <!-- POST Requests - Property -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-building"></i> Bất Động Sản (Property)
+      </div>
+      <div class="card-body">
+        <button class="btn btn-success btn-test" onclick="testAddProperty()">
+          <i class="fas fa-plus"></i> Thêm Property Mới
+        </button>
+        <button class="btn btn-info btn-test" onclick="testGetAllProperties()">
+          <i class="fas fa-list"></i> Lấy Danh Sách Property
+        </button>
+      </div>
+    </div>
+
+    <!-- POST Requests - Room -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-door-open"></i> Phòng (Room)
+      </div>
+      <div class="card-body">
+        <button class="btn btn-success btn-test" onclick="testAddRoom()">
+          <i class="fas fa-plus"></i> Thêm Phòng Mới
+        </button>
+        <button class="btn btn-info btn-test" onclick="testGetRooms()">
+          <i class="fas fa-door-open"></i> Lấy Danh Sách Phòng
+        </button>
+      </div>
+    </div>
+
+    <!-- Custom Request -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-code"></i> Gửi Request Tùy Chỉnh
+      </div>
+      <div class="card-body">
+        <div class="input-group">
+          <label>Phương thức:</label>
+          <select id="customMethod" class="form-control" style="width: 150px;">
+            <option value="GET">GET</option>
+            <option value="POST" selected>POST</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Payload JSON:</label>
+          <textarea id="customPayload" class="form-control" rows="4">{"action": "getAllManagers"}</textarea>
+        </div>
+        <button class="btn btn-warning btn-test" onclick="sendCustomRequest()">
+          <i class="fas fa-paper-plane"></i> Gửi Request
+        </button>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-info-circle"></i> Kết Quả
+        <span id="statusBadge" class="status-badge"></span>
+      </div>
+      <div class="card-body">
+        <div id="result"></div>
+      </div>
+    </div>
+
+    <!-- Help -->
+    <div class="card" style="background-color: #ecf0f1;">
+      <div class="card-header" style="background-color: #34495e;">
+        <i class="fas fa-question-circle"></i> Hướng Dẫn & Lưu Ý
+      </div>
+      <div class="card-body">
+        <ul>
+          <li><strong>URL Deploy:</strong> Phải là URL từ Deployment chính thức, không phải URL preview</li>
+          <li><strong>CORS:</strong> Google Apps Script tự động hỗ trợ CORS nếu bạn sử dụng <code>redirect: follow</code></li>
+          <li><strong>Lỗi 405:</strong> Xảy ra khi không có hàm <code>doPost(e)</code> - Đã sửa xong ✅</li>
+          <li><strong>Version mới:</strong> Sau mỗi sửa code, phải tạo <strong>New Deployment</strong></li>
+          <li><strong>JSON từ POST:</strong> Gửi JSON trong <code>body: JSON.stringify(payload)</code> với header <code>Content-Type: application/json</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Lấy URL từ localStorage
+    function getDeployUrl() {
+      const url = document.getElementById('deployUrl').value.trim();
+      if (!url) {
+        showError('❌ Vui lòng nhập URL Deploy');
+        throw new Error('Missing Deploy URL');
+      }
+      localStorage.setItem('deployUrl', url);
+      return url;
+    }
+
+    function showResult(data, status = 'success', message = null) {
+      const resultDiv = document.getElementById('result');
+      const badge = document.getElementById('statusBadge');
+      
+      resultDiv.className = 'result-' + status;
+      badge.className = 'status-badge status-' + status;
+      badge.innerHTML = status === 'success' ? '✅ Thành công' : (status === 'error' ? '❌ Lỗi' : '⏳ Đang xử lý');
+      
+      let html = `<span class="status-badge status-${status}">${new Date().toLocaleTimeString('vi-VN')}</span>`;
+      if (message) html += `\n<strong>${message}</strong>\n\n`;
+      html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+      
+      resultDiv.innerHTML = html;
+      resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function showError(error) {
+      console.error(error);
+      showResult({ error: error }, 'error', '❌ Lỗi');
+    }
+
+    // GET - Lấy Dashboard Stats
+    async function testGetDashboard() {
+      try {
+        showResult({}, 'loading', '⏳ Đang lấy Dashboard Stats...');
+        const url = getDeployUrl() + '?type=api';
+        const response = await fetch(url, {
+          method: 'GET',
+          redirect: 'follow'
+        });
+        const data = await response.json();
+        showResult(data, 'success', '📊 Dashboard Stats');
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    // GET - Lấy HTML
+    async function testGetHTML() {
+      try {
+        showResult({}, 'loading', '⏳ Đang lấy giao diện HTML...');
+        const url = getDeployUrl();
+        const response = await fetch(url, {
+          method: 'GET',
+          redirect: 'follow'
+        });
+        const html = await response.text();
+        showResult({ message: 'HTML received', length: html.length, preview: html.substring(0, 500) }, 'success', '📄 Giao Diện HTML');
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    // POST - Kiểm tra kết nối
+    async function testConnection() {
+      try {
+        showResult({}, 'loading', '⏳ Kiểm tra kết nối...');
+        const url = getDeployUrl() + '?type=api';
+        const response = await fetch(url, {
+          method: 'GET',
+          redirect: 'follow'
+        });
+        if (response.ok) {
+          showResult({ status: 'Connected', statusCode: response.status }, 'success', '✅ Kết nối thành công');
+        } else {
+          showResult({ status: response.statusText, statusCode: response.status }, 'error', '❌ Lỗi kết nối');
+        }
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    // POST - Thêm Manager
+    async function testAddManager() {
+      try {
+        showResult({}, 'loading', '⏳ Đang thêm Manager...');
+        const payload = {
+          action: 'addManager',
+          managerName: 'Nguyễn Văn A',
+          email: 'nguyenvana@example.com',
+          phone: '0987654321'
+        };
+        const response = await fetch(getDeployUrl(), {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        showResult(data, data.success ? 'success' : 'error', '➕ Thêm Manager');
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    // POST - Lấy tất cả Manager
+    async function testGetAllManagers() {
+      try {
+        showResult({}, 'loading', '⏳ Đang lấy danh sách Manager...');
+        const payload = { action: 'getAllManagers' };
+        const response = await fetch(getDeployUrl(), {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        showResult(data, data.success ? 'success' : 'error', '👥 Danh Sách Manager');
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    // POST - Thêm Property
+    async function testAddProperty() {
+      try {
+        showResult({}, 'loading', '⏳ Đang thêm Property...');
+        const payload = {
+          action: 'addProperty',
+          managerId: 1,
+          propertyName: 'Nhà Trọ Test',
+          address: '123 Đường Test, Q. Đống Đa, Hà Nội',
+          totalRooms: 10
+        };
+        const response = await fetch(getDeployUrl(), {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        showResult(data, data.success ? 'success' : 'error', '🏢 Thêm Property');
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    // POST - Lấy tất cả Property
+    async function testGetAllProperties() {
+      try {
+        showResult({}, 'loading', '⏳ Đang lấy danh sách Property...');
+        const payload = { action: 'getAllProperties' };
+        const response = await fetch(getDeployUrl(), {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        showResult(data, data.success ? 'success' : 'error', '🏢 Danh Sách Property');
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    // POST - Thêm Room
+    async function testAddRoom() {
+      try {
+        showResult({}, 'loading', '⏳ Đang thêm Room...');
+        const payload = {
+          action: 'addRoom',
+          propertyId: 1,
+          roomName: 'Phòng 101',
+          floor: 1,
+          price: 5000000,
+          description: 'Phòng góc, view đường'
+        };
+        const response = await fetch(getDeployUrl(), {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        showResult(data, data.success ? 'success' : 'error', '🚪 Thêm Room');
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    // POST - Lấy Rooms
+    async function testGetRooms() {
+      try {
+        showResult({}, 'loading', '⏳ Đang lấy danh sách Rooms...');
+        const payload = { action: 'getRooms', propertyId: 1 };
+        const response = await fetch(getDeployUrl(), {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        showResult(data, data.success ? 'success' : 'error', '🚪 Danh Sách Rooms');
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    // Custom Request
+    async function sendCustomRequest() {
+      try {
+        const method = document.getElementById('customMethod').value;
+        const payloadStr = document.getElementById('customPayload').value;
+        const payload = JSON.parse(payloadStr);
+        
+        showResult({}, 'loading', `⏳ Gửi ${method} Request...`);
+        
+        let url = getDeployUrl();
+        let options = {
+          method: method,
+          redirect: 'follow',
+          headers: { 'Content-Type': 'application/json' }
+        };
+
+        if (method === 'POST') {
+          options.body = JSON.stringify(payload);
+        } else {
+          // GET - thêm query params
+          if (payload.action) {
+            url += '?type=api';
+          }
+        }
+
+        const response = await fetch(url, options);
+        const data = await response.json();
+        showResult(data, data.success ? 'success' : 'error', `${method} Request`);
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    // Load URL từ localStorage on page load
+    window.addEventListener('load', () => {
+      const savedUrl = localStorage.getItem('deployUrl');
+      if (savedUrl) {
+        document.getElementById('deployUrl').value = savedUrl;
+      }
+    });
+  </script>
+</body>
+</html>

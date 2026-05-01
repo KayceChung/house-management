@@ -629,7 +629,28 @@ function formatDateVN(date) {
 // ==========================================
 
 function doGet(e) {
-  // Build complete HTML with inline config + api.js
+  // Nếu request có tham số ?type=api thì trả về JSON thay vì HTML
+  if (e.parameter.type === 'api') {
+    try {
+      var stats = getDashboardStats();
+      return ContentService.createTextOutput(JSON.stringify(stats))
+        .setMimeType(ContentService.MimeType.JSON)
+        .setHeader('Access-Control-Allow-Origin', '*')
+        .setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        .setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    } catch (error) {
+      var errorResponse = {
+        success: false,
+        message: 'Lỗi Server: ' + error.toString(),
+        timestamp: new Date().toISOString()
+      };
+      return ContentService.createTextOutput(JSON.stringify(errorResponse))
+        .setMimeType(ContentService.MimeType.JSON)
+        .setHeader('Access-Control-Allow-Origin', '*');
+    }
+  }
+
+  // Mặc định trả về giao diện web quản lý
   var html = getFullHtmlContent();
   return HtmlService.createHtmlOutput(html)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -1866,26 +1887,52 @@ function doPost(e) {
       Logger.log('⚠️ Database initialization returned: ' + ensureResult.message);
     }
     
-    Logger.log('Action: ' + e.parameter.action);
-    
-    // Parse form-urlencoded data instead of JSON
-    var action = e.parameter.action;
+    // Parse JSON data từ postData.contents hoặc form-urlencoded
     var params = {};
+    var action = '';
+    
+    // Thử phân tích JSON từ postData
+    if (e.postData && e.postData.contents) {
+      try {
+        params = JSON.parse(e.postData.contents);
+        action = params.action;
+        Logger.log('✅ Parsed JSON from postData.contents');
+        Logger.log('📡 Action: ' + action);
+        Logger.log('📋 Params: ' + JSON.stringify(params).substring(0, 200));
+      } catch (jsonError) {
+        Logger.log('⚠️ Could not parse JSON, trying form-urlencoded...');
+        // Fallback to form-urlencoded
+        action = e.parameter.action;
+        if (e.parameter.params) {
+          try {
+            params = JSON.parse(e.parameter.params);
+          } catch (parseError) {
+            Logger.log('⚠️ Warning parsing params: ' + parseError.toString());
+            params = e.parameter;
+          }
+        } else {
+          params = e.parameter;
+        }
+        Logger.log('📡 Action: ' + action);
+      }
+    } else {
+      // Form-urlencoded fallback
+      action = e.parameter.action;
+      if (e.parameter.params) {
+        try {
+          params = JSON.parse(e.parameter.params);
+        } catch (parseError) {
+          Logger.log('⚠️ Warning parsing params: ' + parseError.toString());
+          params = e.parameter;
+        }
+      } else {
+        params = e.parameter;
+      }
+      Logger.log('📡 Action: ' + action);
+    }
     
     if (!action) {
       throw new Error('Missing action parameter');
-    }
-    
-    Logger.log('📡 Action: ' + action);
-    
-    if (e.parameter.params) {
-      try {
-        params = JSON.parse(e.parameter.params);
-        Logger.log('📋 Params: ' + JSON.stringify(params));
-      } catch (parseError) {
-        Logger.log('⚠️ Warning parsing params: ' + parseError.toString());
-        params = {};
-      }
     }
     
     Logger.log('🔄 Routing to apiRouter...');
