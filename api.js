@@ -394,27 +394,9 @@ async function loadTenantRooms() {
         
         if (data.success && data.rooms) {
             let options = '<option value="">-- Chọn Phòng Còn Trống --</option>';
-    console.log('📝 Opening Add Tenant Modal...');
-    
-    // Xóa dữ liệu cũ trong form
-    document.getElementById('tenantName').value = '';
-    document.getElementById('tenantPhone').value = '';
-    document.getElementById('tenantIdCard').value = '';
-    document.getElementById('tenantEmail').value = '';
-    document.getElementById('tenantRoomId').value = '';
-    
-    // Tải danh sách phòng còn trống
-    loadTenantRooms();
-    
-    // Hiển thị modal
-    const modalElement = document.getElementById('addTenantModal');
-    if (modalElement) {
-        const modal = new bootstrap.Modal(modalElement);
-        modal.show();
-        console.log('✅ Modal opened');
-    } else {
-        console.error('❌ Modal element not found: #addTenantModal');
-    } availableRooms = data.rooms.filter(room => room.status === 'Trống');
+            
+            // Filter để chỉ hiển thị phòng "Trống"
+            const availableRooms = data.rooms.filter(room => room.status === 'Trống');
             
             if (availableRooms.length === 0) {
                 options = '<option value="">-- Không có phòng còn trống --</option>';
@@ -437,7 +419,43 @@ async function loadTenantRooms() {
             const roomSelect = document.getElementById('tenantRoomId');
             if (roomSelect) {
                 roomSelect.innerHTML = '<option value="">-- Lỗi tải danh sách phòng --</option>';
-        ole.log('➕ Adding new tenant...');
+            }
+        }
+    } catch (error) {
+        console.error('❌ Lỗi khi tải danh sách phòng:', error);
+        const roomSelect = document.getElementById('tenantRoomId');
+        if (roomSelect) {
+            roomSelect.innerHTML = '<option value="">-- Lỗi tải danh sách phòng --</option>';
+        }
+    }
+}
+
+function openAddTenantModal() {
+    console.log('📝 Opening Add Tenant Modal...');
+    
+    // Xóa dữ liệu cũ trong form
+    document.getElementById('tenantName').value = '';
+    document.getElementById('tenantPhone').value = '';
+    document.getElementById('tenantIdCard').value = '';
+    document.getElementById('tenantEmail').value = '';
+    document.getElementById('tenantRoomId').value = '';
+    
+    // Tải danh sách phòng còn trống
+    loadTenantRooms();
+    
+    // Hiển thị modal
+    const modalElement = document.getElementById('addTenantModal');
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+        console.log('✅ Modal opened');
+    } else {
+        console.error('❌ Modal element not found: #addTenantModal');
+    }
+}
+
+async function addNewTenant() {
+    console.log('➕ Adding new tenant...');
     
     const name = document.getElementById('tenantName').value?.trim();
     const phone = document.getElementById('tenantPhone').value?.trim();
@@ -496,25 +514,7 @@ async function loadTenantRooms() {
         }
     } catch (error) {
         console.error('❌ Lỗi khi thêm khách hàng:', error);
-        alert('❌ Lỗi: ' + error.message
-        idCard: idCard,
-        email: email,
-        roomId: roomId
-    });
-
-    if (data.success) {
-        alert('✅ Khách hàng được thêm thành công');
-        bootstrap.Modal.getInstance(document.getElementById('addTenantModal')).hide();
-        
-        document.getElementById('tenantName').value = '';
-        document.getElementById('tenantPhone').value = '';
-        document.getElementById('tenantIdCard').value = '';
-        document.getElementById('tenantEmail').value = '';
-        document.getElementById('tenantRoomId').value = '';
-        
-        loadTenants();
-    } else {
-        alert('❌ Lỗi: ' + (data.message || 'Không thể thêm khách hàng'));
+        alert('❌ Lỗi: ' + error.message);
     }
 }
 
