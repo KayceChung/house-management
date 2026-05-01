@@ -146,6 +146,9 @@ async function loadDashboard() {
             document.getElementById('monthlyRevenue').textContent = formattedRevenue;
             
             console.log(`✅ Dashboard loaded successfully - Rooms: ${totalRooms}, Occupied: ${occupiedRooms}, Unpaid: ${unpaidCount}, Revenue: ${formattedRevenue}`);
+            
+            // Load and render charts & widgets
+            loadEnhancedDashboard();
         } else {
             const errorMsg = data?.message || 'Unknown error';
             console.error(`❌ Failed to load dashboard: ${errorMsg}`);
@@ -515,6 +518,262 @@ async function addNewTenant() {
     } catch (error) {
         console.error('❌ Lỗi khi thêm khách hàng:', error);
         alert('❌ Lỗi: ' + error.message);
+    }
+}
+
+// ========== ENHANCED DASHBOARD WITH CHARTS & WIDGETS ==========
+
+/**
+ * Load enhanced dashboard with all charts and widgets
+ */
+async function loadEnhancedDashboard() {
+    try {
+        console.log('📊 Loading enhanced dashboard with charts...');
+        
+        // Get monthly revenue data
+        const revenueData = await callApi('getMonthlyRevenue', { months: 12 });
+        if (revenueData.success && revenueData.data) {
+            renderMonthlyRevenueChart(revenueData.data);
+        }
+        
+        // Get room status
+        const roomStatusData = await callApi('getRoomStatusStats');
+        if (roomStatusData.success && roomStatusData.data) {
+            renderRoomStatusChart(roomStatusData.data);
+        }
+        
+        // Get overdue invoices
+        const overdueData = await callApi('getOverdueInvoices', { daysThreshold: 30 });
+        if (overdueData.success && overdueData.data) {
+            renderOverdueInvoicesWidget(overdueData.data);
+        }
+        
+        // Get total debt
+        const debtData = await callApi('getTotalDebt');
+        if (debtData.success && debtData.data) {
+            renderDebtSummaryWidget(debtData.data);
+        }
+        
+        console.log('✅ Enhanced dashboard loaded successfully');
+    } catch (error) {
+        console.error('❌ Error loading enhanced dashboard:', error);
+    }
+}
+
+/**
+ * Render monthly revenue chart (12 months)
+ */
+function renderMonthlyRevenueChart(data) {
+    try {
+        if (!data || data.length === 0) {
+            document.getElementById('revenueChart').innerHTML = '<div class="text-center text-muted py-5">Chưa có dữ liệu doanh thu</div>';
+            return;
+        }
+        
+        const labels = data.map(item => item.monthLabel);
+        const series = [{
+            name: 'Doanh Thu (triệu đ)',
+            data: data.map(item => (item.revenue / 1000000).toFixed(1))
+        }];
+        
+        const options = {
+            chart: {
+                type: 'area',
+                height: 300,
+                toolbar: { show: false },
+                animations: { enabled: true }
+            },
+            colors: ['#3498db'],
+            dataLabels: { enabled: false },
+            stroke: {
+                curve: 'smooth',
+                width: 2
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.45,
+                    opacityTo: 0.05,
+                    stops: [20, 100, 100, 100]
+                }
+            },
+            xaxis: { categories: labels },
+            yaxis: {
+                title: { text: 'Doanh Thu (triệu đồng)' },
+                labels: {
+                    formatter: function(value) {
+                        return value.toFixed(1) + 'M';
+                    }
+                }
+            },
+            grid: {
+                borderColor: '#e0e0e0'
+            },
+            tooltip: {
+                y: {
+                    formatter: function(value) {
+                        return 'Tháng này: ' + value + ' triệu đ';
+                    }
+                }
+            }
+        };
+        
+        const chart = new ApexCharts(document.getElementById('revenueChart'), {
+            series: series,
+            ...options
+        });
+        
+        chart.render();
+        console.log('✅ Monthly revenue chart rendered');
+    } catch (error) {
+        console.error('❌ Error rendering revenue chart:', error);
+        document.getElementById('revenueChart').innerHTML = '<div class="text-danger py-5">Lỗi tải biểu đồ</div>';
+    }
+}
+
+/**
+ * Render room status pie chart
+ */
+function renderRoomStatusChart(data) {
+    try {
+        if (!data) {
+            document.getElementById('roomStatusChart').innerHTML = '<div class="text-center text-muted py-5">Chưa có dữ liệu phòng</div>';
+            return;
+        }
+        
+        const series = [
+            data.occupied || 0,
+            data.vacant || 0,
+            data.maintenance || 0
+        ];
+        
+        const labels = [
+            'Đã Cho Thuê (' + (data.occupied || 0) + ')',
+            'Trống (' + (data.vacant || 0) + ')',
+            'Bảo Trì (' + (data.maintenance || 0) + ')'
+        ];
+        
+        const options = {
+            chart: {
+                type: 'pie',
+                height: 300
+            },
+            colors: ['#27ae60', '#f39c12', '#e74c3c'],
+            labels: labels,
+            legend: { position: 'bottom' },
+            dataLabels: {
+                formatter: function(val) {
+                    return Math.round(val) + '%';
+                }
+            },
+            responsive: [{
+                breakpoint: 480,
+                options: {
+                    legend: { position: 'bottom' }
+                }
+            }]
+        };
+        
+        const chart = new ApexCharts(document.getElementById('roomStatusChart'), {
+            series: series,
+            ...options
+        });
+        
+        chart.render();
+        console.log('✅ Room status chart rendered');
+    } catch (error) {
+        console.error('❌ Error rendering room status chart:', error);
+        document.getElementById('roomStatusChart').innerHTML = '<div class="text-danger py-5">Lỗi tải biểu đồ</div>';
+    }
+}
+
+/**
+ * Render overdue invoices widget
+ */
+function renderOverdueInvoicesWidget(invoices) {
+    try {
+        const container = document.getElementById('overdueInvoicesWidget');
+        
+        if (!invoices || invoices.length === 0) {
+            container.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-check-circle"></i> Không có hóa đơn quá hạn</div>';
+            return;
+        }
+        
+        let html = '';
+        invoices.forEach(invoice => {
+            html += `
+                <div class="invoice-item">
+                    <div>
+                        <div class="invoice-name">${invoice.tenantName}</div>
+                        <div class="invoice-days"><i class="fas fa-calendar"></i> ${invoice.daysOverdue} ngày quá hạn</div>
+                    </div>
+                    <div class="invoice-amount">${formatVND(invoice.amount)}</div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        console.log('✅ Overdue invoices widget rendered');
+    } catch (error) {
+        console.error('❌ Error rendering overdue invoices widget:', error);
+        document.getElementById('overdueInvoicesWidget').innerHTML = '<div class="text-danger">Lỗi tải dữ liệu</div>';
+    }
+}
+
+/**
+ * Render debt summary widget
+ */
+function renderDebtSummaryWidget(debtData) {
+    try {
+        const container = document.getElementById('debtSummaryWidget');
+        
+        if (!debtData) {
+            container.innerHTML = '<div class="text-center text-muted">Không có dữ liệu</div>';
+            return;
+        }
+        
+        const totalDebt = debtData.totalDebt || 0;
+        const unpaidCount = debtData.unpaidCount || 0;
+        
+        const html = `
+            <div class="debt-summary">
+                <div class="debt-total">${formatVND(totalDebt)}</div>
+                <div class="debt-count">
+                    <i class="fas fa-file-invoice"></i> 
+                    ${unpaidCount} hóa đơn chờ thanh toán
+                </div>
+                ${unpaidCount > 0 ? `
+                    <div style="margin-top: 1rem;">
+                        <span class="badge bg-danger" style="font-size: 0.9rem;">
+                            ⚠️ Cần theo dõi
+                        </span>
+                    </div>
+                ` : '<div style="margin-top: 1rem;"><span class="badge bg-success">✓ Không nợ</span></div>'}
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        console.log('✅ Debt summary widget rendered');
+    } catch (error) {
+        console.error('❌ Error rendering debt summary widget:', error);
+        document.getElementById('debtSummaryWidget').innerHTML = '<div class="text-danger">Lỗi tải dữ liệu</div>';
+    }
+}
+
+/**
+ * Format number to VND currency
+ */
+function formatVND(value) {
+    if (!value || isNaN(value)) return '0 đ';
+    
+    const num = parseInt(value);
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M đ';
+    } else if (num >= 1000) {
+        return (num / 1000).toFixed(0) + 'K đ';
+    } else {
+        return num + ' đ';
     }
 }
 
