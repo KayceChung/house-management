@@ -3,6 +3,10 @@
 const API_URL = window.CONFIG?.API_URL || '/api/proxy';
 const FALLBACK_API_URL = window.CONFIG?.DIRECT_API_URL || 'https://script.google.com/macros/s/AKfycbyGjeIv9o8ZquGLDoNuHIAhJnOiTrjCzng734KZMPfICBVOhJXUQhcwrKmu4WTF-pmFfA/exec';
 
+// ========== PROPERTY STATE ==========
+const DEFAULT_PROPERTY_ID = 'DEFAULT';
+let cachedProperties = [];
+
 // ========== API HELPER FUNCTION ==========
 async function callApi(functionName, params = {}) {
     if (!API_URL) {
@@ -175,20 +179,38 @@ async function loadDashboard() {
 // ========== ROOMS ==========
 async function loadRooms() {
     console.log('🚪 Loading rooms...');
-    const data = await callApi('getAllRooms');
+    await loadPropertyOptions();
+
+    const selectedPropertyId = document.getElementById('roomsPropertyFilter')?.value || 'ALL';
+    const data = selectedPropertyId === 'ALL'
+        ? await callApi('getAllRooms')
+        : await callApi('getRoomsByProperty', { propertyId: selectedPropertyId });
     
     if (data.success && data.rooms) {
+        const rooms = [...data.rooms].sort((a, b) => {
+            const propertyA = (getPropertyNameById(a.propertyId) || '').toString();
+            const propertyB = (getPropertyNameById(b.propertyId) || '').toString();
+            const compareProperty = propertyA.localeCompare(propertyB, 'vi');
+            if (compareProperty !== 0) return compareProperty;
+
+            const roomNameA = (a.roomName || '').toString();
+            const roomNameB = (b.roomName || '').toString();
+            return roomNameA.localeCompare(roomNameB, 'vi');
+        });
+
         let html = '';
-        if (data.rooms.length === 0) {
-            html = '<tr><td colspan="6" class="text-center py-3 text-muted">Không có dữ liệu</td></tr>';
+        if (rooms.length === 0) {
+            html = '<tr><td colspan="7" class="text-center py-3 text-muted">Không có dữ liệu</td></tr>';
         } else {
-            data.rooms.forEach(room => {
+            rooms.forEach(room => {
+                const propertyName = getPropertyNameById(room.propertyId);
                 const statusBadge = room.status === 'Trống' 
                     ? '<span class="badge bg-success">Trống</span>' 
                     : '<span class="badge bg-warning">Đã Cho Thuê</span>';
                 html += `
                     <tr>
                         <td><small class="text-muted">${room.roomId || '-'}</small></td>
+                        <td>${propertyName}</td>
                         <td><strong>${room.roomName || '-'}</strong></td>
                         <td>${room.floor || '-'}</td>
                         <td>${statusBadge}</td>
@@ -203,11 +225,69 @@ async function loadRooms() {
 }
 
 function openAddRoomModal() {
-    const modal = new bootstrap.Modal(document.getElementById('addRoomModal'));
-    modal.show();
+    loadPropertyOptions().then(() => {
+        const modal = new bootstrap.Modal(document.getElementById('addRoomModal'));
+        modal.show();
+    });
+}
+
+async function loadPropertyOptions() {
+    const data = await callApi('getAllProperties');
+
+    if (data.success && Array.isArray(data.properties)) {
+        cachedProperties = data.properties;
+    } else {
+        cachedProperties = [];
+    }
+
+    renderPropertyOptions('roomsPropertyFilter', { includeAll: true, keepCurrentSelection: true });
+    renderPropertyOptions('roomPropertyId', { includeAll: false, keepCurrentSelection: true });
+}
+
+function getPropertyNameById(propertyId) {
+    if (!propertyId || propertyId === DEFAULT_PROPERTY_ID) {
+        return 'Mặc định';
+    }
+
+    const found = cachedProperties.find(property => property.propertyId === propertyId);
+    return found ? (found.propertyName || propertyId) : propertyId;
+}
+
+function renderPropertyOptions(selectId, options = {}) {
+    const { includeAll = false, keepCurrentSelection = false } = options;
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    const currentValue = keepCurrentSelection ? select.value : '';
+    let html = '';
+
+    if (includeAll) {
+        html += '<option value="ALL">-- Tất cả tài sản --</option>';
+    }
+
+    if (cachedProperties.length > 0) {
+        cachedProperties.forEach(property => {
+            html += `<option value="${property.propertyId}">${property.propertyName || property.propertyId}</option>`;
+        });
+    }
+
+    html += `<option value="${DEFAULT_PROPERTY_ID}">Mặc định</option>`;
+
+    select.innerHTML = html;
+
+    if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
+        select.value = currentValue;
+    } else {
+        select.value = includeAll ? 'ALL' : DEFAULT_PROPERTY_ID;
+    }
+}
+
+function handleRoomPropertyFilterChange() {
+    loadRooms();
 }
 
 async function addNewRoom() {
+    const propertyId = document.getElementById('roomPropertyId').value || DEFAULT_PROPERTY_ID;
     const name = document.getElementById('roomName').value?.trim();
     const floor = document.getElementById('roomFloor').value;
     const price = document.getElementById('roomPrice').value;
@@ -219,7 +299,7 @@ async function addNewRoom() {
     }
 
     const data = await callApi('addRoom', {
-        propertyId: 'DEFAULT',  // Single property mode
+        propertyId: propertyId,
         roomName: name,
         floor: parseInt(floor),
         price: parseFloat(price),
@@ -235,6 +315,7 @@ async function addNewRoom() {
         document.getElementById('roomFloor').value = '';
         document.getElementById('roomPrice').value = '';
         document.getElementById('roomDescription').value = '';
+        document.getElementById('roomPropertyId').value = DEFAULT_PROPERTY_ID;
         
         loadRooms();
     } else {
@@ -787,5 +868,11 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('📍 Please update config.js with your Google Apps Script Web App URL');
     }
     
+    const roomsPropertyFilter = document.getElementById('roomsPropertyFilter');
+    if (roomsPropertyFilter) {
+        roomsPropertyFilter.addEventListener('change', handleRoomPropertyFilterChange);
+    }
+
+    loadPropertyOptions();
     loadDashboard();
 });
